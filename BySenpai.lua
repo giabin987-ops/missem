@@ -11,14 +11,13 @@ task.spawn(function()
     end
 end)
 
--- [[ LOAD MISS HUB (GIỮ NGUYÊN) ]]
+-- [[ LOAD MISS HUB ]]
 task.spawn(function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
     end)
 end)
 
--- đợi lib load
 task.wait(4)
 
 -- [[ LOAD FLUENT ]]
@@ -27,10 +26,9 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 local Window = Fluent:CreateWindow({
     Title = "MISS HUB - Bloxfruit 2026",
     SubTitle = "Team: " .. tostring(getgenv().Team),
-    TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.RightControl -- đổi phím tránh conflict
+    MinimizeKey = Enum.KeyCode.RightControl
 })
 
 local Tabs = {
@@ -46,42 +44,59 @@ _G = {
 
 local VisitedChests = {}
 
--- [[ FIX INPUT ]]
-local UIS = game:GetService("UserInputService")
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        pcall(function()
-            Window:ToggleMinimize()
-        end)
-    end
-end)
+-- [[ NOTIFY XỊN ]]
+local CurrentNotify
+function NotifyCenter(text)
+    if CurrentNotify then CurrentNotify:Destroy() end
 
--- giữ chuột
-task.spawn(function()
-    while true do
-        task.wait(1)
-        pcall(function()
-            UIS.MouseIconEnabled = true
-        end)
-    end
-end)
+    local gui = Instance.new("ScreenGui", game.CoreGui)
+    gui.IgnoreGuiInset = true
+    CurrentNotify = gui
 
--- [[ TWEEN HYBRID ]]
+    local frame = Instance.new("Frame", gui)
+    frame.Size = UDim2.new(0, 420, 0, 70)
+    frame.Position = UDim2.new(0.5, -210, 0.5, -35)
+    frame.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    frame.BackgroundTransparency = 0.2
+
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12)
+
+    local stroke = Instance.new("UIStroke", frame)
+    stroke.Color = Color3.fromRGB(255,60,60)
+    stroke.Thickness = 2
+
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1,-20,1,-20)
+    label.Position = UDim2.new(0,10,0,10)
+    label.BackgroundTransparency = 1
+    label.Text = "⚠️ "..text
+    label.TextColor3 = Color3.fromRGB(255,80,80)
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.TextTransparency = 1
+
+    local TweenService = game:GetService("TweenService")
+
+    TweenService:Create(label, TweenInfo.new(0.3), {TextTransparency = 0}):Play()
+
+    task.spawn(function()
+        task.wait(2.5)
+        TweenService:Create(label, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+        task.wait(0.4)
+        gui:Destroy()
+    end)
+end
+
+-- [[ TWEEN ]]
 function TweenTo(cf)
     local char = player.Character
     if not char then return end
-
     local root = char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    if _G.CurrentTween then
-        _G.CurrentTween:Cancel()
-    end
+    if _G.CurrentTween then _G.CurrentTween:Cancel() end
 
     local dist = (cf.Position - root.Position).Magnitude
-
-    -- gần → TP
     if dist < 300 then
         root.CFrame = cf
         return
@@ -89,23 +104,12 @@ function TweenTo(cf)
 
     local tween = game:GetService("TweenService"):Create(
         root,
-        TweenInfo.new(dist / _G.TweenSpeed, Enum.EasingStyle.Linear),
+        TweenInfo.new(dist/_G.TweenSpeed, Enum.EasingStyle.Linear),
         {CFrame = cf}
     )
 
     _G.CurrentTween = tween
     tween:Play()
-
-    task.spawn(function()
-        while tween and tween.PlaybackState == Enum.PlaybackState.Playing do
-            for _, v in pairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
-                end
-            end
-            task.wait()
-        end
-    end)
 
     return tween
 end
@@ -113,7 +117,7 @@ end
 -- [[ FIND CHEST ]]
 function GetRealChest()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
+    if not root then return end
 
     local target, distMin = nil, math.huge
 
@@ -134,34 +138,9 @@ function GetRealChest()
     return target
 end
 
--- [[ HOP SERVER ]]
-function HopServer()
-    VisitedChests = {}
-
-    local TPS = game:GetService("TeleportService")
-    local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-
-    local s, r = pcall(function()
-        return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api))
-    end)
-
-    if s and r.data then
-        for _, v in pairs(r.data) do
-            if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                TPS:TeleportToPlaceInstance(game.PlaceId, v.id, player)
-                return
-            end
-        end
-    end
-
-    TPS:Teleport(game.PlaceId, player)
-end
-
 -- [[ MAIN ]]
 function MainLogic()
     repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-
-    local retry = 0
 
     while _G.AutoCyborg do
         task.wait(0.1)
@@ -173,68 +152,79 @@ function MainLogic()
         local Fist = char:FindFirstChild("Fist of Darkness")
             or player.Backpack:FindFirstChild("Fist of Darkness")
 
-        -- có fist → raid ngay
+        -- 🔥 RAID FIX
         if Fist then
-            if _G.CurrentTween then _G.CurrentTween:Cancel() end
+            local Remote = game:GetService("ReplicatedStorage").Remotes.CommF_
 
-            local t1 = TweenTo(CFrame.new(-6473, 250, -4493))
-            if t1 then t1.Completed:Wait() end
+            TweenTo(CFrame.new(-6473,250,-4493))
+            task.wait(0.5)
 
-            pcall(function()
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
-            end)
+            local bought = false
+            for i=1,5 do
+                local result
+                pcall(function()
+                    result = Remote:InvokeServer("BuyMicrochip")
+                end)
 
-            task.wait(0.3)
+                if player.Backpack:FindFirstChild("Microchip") then
+                    bought = true
+                    break
+                end
 
-            local t2 = TweenTo(CFrame.new(-6475, 250, -4490))
-            if t2 then t2.Completed:Wait() end
+                if type(result)=="string" then
+                    if result:find("Beli") then
+                        NotifyCenter("MISS HUB: Bạn không đủ Beli")
+                    elseif result:lower():find("fragment") then
+                        NotifyCenter("MISS HUB: Bạn không đủ Fragment")
+                    end
+                end
 
-            pcall(function()
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid")
-            end)
+                task.wait(0.5)
+            end
+
+            if not bought then
+                NotifyCenter("MISS HUB: Không mua được chip!")
+                return
+            end
+
+            TweenTo(CFrame.new(-6475,250,-4490))
+            task.wait(0.5)
+
+            for i=1,5 do
+                pcall(function()
+                    Remote:InvokeServer("StartRaid")
+                end)
+                task.wait(1)
+            end
 
             break
         end
 
-        -- farm chest
+        -- 💰 FARM CHEST
         local chest = GetRealChest()
-
         if chest then
-            retry = 0
-
             local tw = TweenTo(chest.CFrame + Vector3.new(0,3,0))
             if tw then tw.Completed:Wait() end
 
-            for i = 1,3 do
+            for i=1,3 do
                 firetouchinterest(root, chest, 0)
                 firetouchinterest(root, chest, 1)
                 task.wait(0.1)
             end
 
             VisitedChests[chest] = true
-
-        else
-            retry += 1
-            task.wait(5)
-
-            if retry >= 5 then
-                HopServer()
-                break
-            end
         end
     end
 end
 
 -- [[ UI ]]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Cyborg (Tween Fast)",
+    Title = "Auto Cyborg (Fix Full + Notify)",
     Default = false,
     Callback = function(v)
         _G.AutoCyborg = v
         if v then
             task.spawn(MainLogic)
-        else
-            if _G.CurrentTween then _G.CurrentTween:Cancel() end
         end
     end
 })
