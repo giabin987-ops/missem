@@ -1,4 +1,4 @@
--- [[ 2. Auto Chọn TEAM & Load LIB ]]
+-- [[ 2. Auto Chọn TEAM & ccLoad LIB ]]
 repeat task.wait() until game:IsLoaded()
 local player = game.Players.LocalPlayer
 
