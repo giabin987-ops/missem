@@ -1,22 +1,7 @@
--- [[ 1. FIX LỖI KHÔNG HIỆN MISS HUB ]]
-task.spawn(function()
-    local success, err = pcall(function()
-        loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-    end)
-    if not success then 
-        warn("Đang thử tải lại MISS HUB...")
-        task.wait(2)
-        pcall(function()
-            loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-        end)
-    end
-end)
-
--- [[ 2. KHỞI TẠO LOGIC VÀ UI FLUENT ]]
+-- [[ 2. TỰ ĐỘNG CHỌN TEAM THEO CẤU HÌNH ]]
 repeat task.wait() until game:IsLoaded()
 local player = game.Players.LocalPlayer
 
--- Tự động chọn đội theo cấu hình trên
 task.spawn(function()
     if not player.Team then
         pcall(function()
@@ -25,18 +10,29 @@ task.spawn(function()
     end
 end)
 
-local Fluent = loadstring(game:HttpGet("https://github.com"))()
+-- [[ 3. LOAD MISS HUB (SCREENGUI) - FIX LỖI KHÔNG HIỆN UI ]]
+task.spawn(function()
+    pcall(function()
+        loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
+    end)
+end)
+
+-- [[ 4. KHỞI TẠO FLUENT UI ]]
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
 local Window = Fluent:CreateWindow({
     Title = "MISS HUB - Bloxfruit 2026",
     SubTitle = "Team: " .. getgenv().Team,
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = false, 
+    Acrylic = false, -- Tắt Acrylic giúp Delta ổn định hơn
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
 
-local Tabs = { Main = Window:AddTab({ Title = "Auto Cyborg", Icon = "cpu" }) }
+local Tabs = {
+    Main = Window:AddTab({ Title = "Auto Cyborg", Icon = "cpu" }),
+}
 
 local _G = {
     AutoCyborg = false,
@@ -46,16 +42,17 @@ local _G = {
 
 local VisitedChests = {}
 
--- [[ 3. HÀM DI CHUYỂN SIÊU MƯỢT - KHÔNG GIẬT - KHÔNG RƠI NƯỚC ]]
+-- [[ 5. HÀM DI CHUYỂN SIÊU MƯỢT - KHÔNG GIẬT - KHÔNG RƠI NƯỚC ]]
 function TweenTo(TargetCFrame)
-    local Char = player.Character
-    if not Char or not Char:FindFirstChild("HumanoidRootPart") then return end
-    local Root = Char.HumanoidRootPart
-    local Hum = Char:FindFirstChild("Humanoid")
+    local Character = player.Character
+    if not Character or not Character:FindFirstChild("HumanoidRootPart") then return end
+    
+    local Root = Character.HumanoidRootPart
+    local Hum = Character:FindFirstChild("Humanoid")
     
     if _G.CurrentTween then _G.CurrentTween:Cancel() end
 
-    -- Khóa trọng lực để bay thẳng tắp
+    -- Khóa trọng lực triệt để (Fix lỗi rơi xuống nước/giật lên xuống)
     local BV = Root:FindFirstChild("CyborgBV") or Instance.new("BodyVelocity")
     BV.Name = "CyborgBV"; BV.Parent = Root
     BV.MaxForce = Vector3.new(9e9, 9e9, 9e9); BV.Velocity = Vector3.new(0, 0, 0)
@@ -80,10 +77,11 @@ function TweenTo(TargetCFrame)
     return _G.CurrentTween
 end
 
--- [[ 4. QUÉT RƯƠNG TOÀN MAP - FIX LỖI KHÔNG LỢM RƯƠNG ]]
+-- [[ 6. QUÉT RƯƠNG TOÀN MAP - FIX LỖI CHỈ QUÉT 1 KHU VỰC ]]
 function GetGlobalChest()
     local Target = nil
     local MaxDist = math.huge
+    -- Quét toàn bộ map kể cả các đảo ở xa
     for _, v in pairs(game.Workspace:GetDescendants()) do
         if (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") and v:IsA("BasePart") and not VisitedChests[v] then
             if v:FindFirstChild("TouchInterest") and v.Transparency < 0.5 then 
@@ -101,7 +99,7 @@ function GetGlobalChest()
 end
 
 function HopServer()
-    Fluent:Notify({Title = "MISS HUB", Content = "Đang đổi server mới...", Duration = 5})
+    Fluent:Notify({Title = "MISS HUB", Content = "Hết rương! Đang đổi server...", Duration = 5})
     local TPS = game:GetService("TeleportService")
     local Api = "https://games.roblox.com"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
     local s, r = pcall(function() return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api)) end)
@@ -116,7 +114,7 @@ function HopServer()
     TPS:Teleport(game.PlaceId, player)
 end
 
--- [[ 5. VÒNG LẶP CHÍNH ]]
+-- [[ 7. VÒNG LẶP CHÍNH AUTO CYBORG ]]
 function MainLogic()
     repeat task.wait(1) until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     
@@ -136,22 +134,22 @@ function MainLogic()
                     task.wait(0.1) 
                 end
             else
-                -- Đợi map load trước khi Hop
+                -- Đợi 4 giây cho map load rương ở xa trước khi Hop
                 task.wait(4)
                 if not GetGlobalChest() then HopServer() break end
             end
         else
-            -- Raid Law Logic
+            -- Raid Law Logic (Đã có Fist)
             TweenTo(CFrame.new(-6473, 250, -4493)).Completed:Wait() -- NPC Aris
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
             task.wait(0.5)
-            TweenTo(CFrame.new(-6475, 250, -4490)).Completed:Wait() -- Button
+            TweenTo(CFrame.new(-6475, 250, -4490)).Completed:Wait() -- Button Start Raid
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid") 
         end
     end
 end
 
--- [[ 6. GIAO DIỆN ]]
+-- [[ 8. GIAO DIỆN ]]
 Tabs.Main:AddToggle("AutoCyborg", {
     Title = "Auto Kaitun Cyborg",
     Default = false,
