@@ -1,155 +1,143 @@
--- [[ MISS HUB - GPO ULTIMATE FULL FIXED 2026 ]]
-repeat task.wait() until game:IsLoaded()
+local Fluent = loadstring(game:HttpGet("https://github.com"))()
+local ScreenGui = loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
 
--- 1. NẠP THƯ VIỆN GIAO DIỆN (FLUENT)
-local Fluent = nil
-local s1, r1 = pcall(function() 
-    return game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua") 
-end)
-if s1 and r1 ~= "404: Not Found" then 
-    Fluent = loadstring(r1)() 
-else 
-    Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com"))()
-end
 
--- 2. NẠP DỮ LIỆU MISS HUB (LOADER CHÍNH)
-local s2, r2 = pcall(function() 
-    return game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB") 
-end)
-if s2 and r2 ~= "404: Not Found" then pcall(function() loadstring(r2)() end) end
-
--- 3. NẠP DANH SÁCH NPC TỪ MUPTHUFIX (THAY THẾ FARMDATA)
-local FarmData = {}
-local s3, r3 = pcall(function() 
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/mupthufix"))() 
-end)
-if s3 and type(r3) == "table" then 
-    FarmData = r3 
-else 
-    warn("MISS HUB: Không thể tải danh sách mupthufix!")
-end
-
--- [[ HÀM GỬI LỆNH THÔNG MINH - CHỐNG KICK NSE1 (REMOTE FUNCTION) ]]
-local function SafeRemote(remote, ...)
-    if not remote then return end
-    if remote:IsA("RemoteEvent") then 
-        remote:FireServer(...)
-    elseif remote:IsA("RemoteFunction") then 
-        remote:InvokeServer(...) 
-    end
-end
-
--- [[ HÀM BAY FIX: NHẢY MỖI 4 GIÂY + DỪNG LẬP TỨC ]]
-local function SafeFly(targetCFrame)
-    local lp = game.Players.LocalPlayer
-    local lastJump = tick()
-    while _G.AutoFarm or _G.TweenBoat do
-        task.wait()
-        local char = lp.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        
-        -- DỪNG NGAY LẬP TỨC KHI TẮT NÚT
-        if not root or not (_G.AutoFarm or _G.TweenBoat) then break end
-        if (root.Position - targetCFrame.p).Magnitude < 15 then break end 
-        
-        -- FIX BAY: TỰ ĐỘNG NHẢY MỖI 4 GIÂY ĐỂ NÉ ANTICHEAT
-        if tick() - lastJump >= 4 then 
-            char.Humanoid.Jump = true 
-            lastJump = tick() 
-        end
-        
-        -- BAY CHẬM AN TOÀN (TỐC ĐỘ 80)
-        root.CFrame = root.CFrame + (targetCFrame.p - root.Position).Unit * 1.9
-        root.Velocity = Vector3.new(0,0,0)
-    end
-end
-
--- [[ HÀM TỰ CẦM NẮM ĐẤM (COMBAT) ]]
-local function EquipCombat()
-    local lp = game.Players.LocalPlayer
-    local combat = lp.Backpack:FindFirstChild("Combat") or lp.Character:FindFirstChild("Combat")
-    if combat and not lp.Character:FindFirstChild("Combat") then 
-        lp.Character.Humanoid:EquipTool(combat) 
-    end
-end
-
--- [[ CẤU HÌNH GIAO DIỆN UI ]]
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - FULL FIXED 2026",
-    SubTitle = "by giabin987",
-    TabWidth = 180, Size = UDim2.fromOffset(580, 460),
-    Acrylic = false, Theme = "Dark", MinimizeKey = Enum.KeyCode.LeftControl
+    Title = "MISS HUB - Bloxfruit",
+    SubTitle = "by Senpai",
+    TabWidth = 160,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false, -- Tắt Acrylic để Delta mượt hơn
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Level = Window:AddTab({ Title = "Kaitun Level", Icon = "swords" }),
-    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
+    Main = Window:AddTab({ Title = "Auto Cyborg", Icon = "cpu" }),
 }
 
--- [[ LEVEL CHECK PARAGRAPH ]]
-local LevelLabel = Tabs.Level:AddParagraph({Title = "Level Status", Content = "Checking..."})
+local _G = {
+    AutoCyborg = false,
+    TweenSpeed = 70,
+}
 
--- [[ CHỨC NĂNG KAITUN LEVEL - DÙNG DANH SÁCH MUPTHUFIX ]]
-Tabs.Level:AddToggle("AutoFarm", {Title = "Auto Farm Level", Default = false }):OnChanged(function(v)
-    _G.AutoFarm = v
-    if v then
-        task.spawn(function()
-            while _G.AutoFarm do
-                pcall(function()
-                    local lp = game.Players.LocalPlayer
-                    -- Fix Check Level hoạt động chuẩn GPO 2026
-                    local lv = lp:WaitForChild("Data"):WaitForChild("Level").Value
-                    LevelLabel:SetDesc("Level hiện tại: " .. tostring(lv))
-                    
-                    local target = nil
-                    for _, d in pairs(FarmData) do 
-                        if lv >= d.Min and lv <= d.Max then target = d break end 
-                    end
+-- [ TỌA ĐỘ CHUẨN SEA 2 ]
+local Pos = {
+    Aris = CFrame.new(-6473, 250, -4493),
+    Button = CFrame.new(-6475, 250, -4490),
+    CyborgNPC = CFrame.new(-6371, 236, -4051),
+    RaidEntrance = CFrame.new(-6385, 447, -4465)
+}
 
-                    if target then
-                        EquipCombat() -- TỰ CẦM ĐẤM
-                        if not lp.PlayerGui:FindFirstChild("QuestGui") then
-                            SafeFly(target.NPC) -- BAY ĐẾN NPC
-                            local qRem = game:GetService("ReplicatedStorage"):FindFirstChild("Events"):FindFirstChild("Quest")
-                            SafeRemote(qRem, target.Quest) -- FIX LỖI FIRESERVER/INVOKESERVER
-                        else
-                            -- TÌM QUÁI VÀ FARM
-                            local mobFound = false
-                            for _, mob in pairs(game.Workspace.NPCs:GetChildren()) do
-                                if mob.Name:find(target.Mob) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
-                                    mobFound = true
-                                    while _G.AutoFarm and mob.Humanoid.Health > 0 do
-                                        lp.Character.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0)
-                                        game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
-                                        task.wait(0.1)
-                                    end
-                                    break
-                                end
-                            end
-                            -- NẾU QUÁI CHƯA SPAWN THÌ BAY ĐẾN ĐIỂM MOBPOS CHỜ
-                            if not mobFound and target.MobPos then SafeFly(target.MobPos) end
-                        end
-                    end
-                end)
-                task.wait(1)
-            end
-        end)
-    end
-end)
-
--- [[ CHỨC NĂNG BOOST FPS ]]
-Tabs.Settings:AddToggle("BoostFps", {Title = "Optimize FPS", Default = false }):OnChanged(function(v)
-    if v then
-        for _, obj in pairs(game:GetDescendants()) do
-            if obj:IsA("Part") or obj:IsA("MeshPart") then
-                obj.Material = Enum.Material.SmoothPlastic
-            elseif obj:IsA("Decal") then
-                obj.Transparency = 1
+-- [ HÀM HOP SERVER CHO DELTA ]
+function HopServer()
+    local Http = game:GetService("HttpService")
+    local TPS = game:GetService("TeleportService")
+    local Api = "https://games.roblox.com"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+    local success, result = pcall(function() return Http:JSONDecode(game:HttpGet(Api)) end)
+    if success then
+        for _, v in pairs(result.data) do
+            if v.playing < v.maxPlayers and v.id ~= game.JobId then
+                TPS:TeleportToPlaceInstance(game.PlaceId, v.id, game.Players.LocalPlayer)
+                break
             end
         end
-        game:GetService("Lighting").GlobalShadows = false
     end
-end)
+end
+
+-- [ HÀM DI CHUYỂN MƯỢT ]
+function TweenTo(TargetCFrame)
+    local Character = game.Players.LocalPlayer.Character
+    if not Character or not Character:FindFirstChild("HumanoidRootPart") then return end
+    local Root = Character.HumanoidRootPart
+    local Distance = (TargetCFrame.Position - Root.Position).Magnitude
+    local Tween = game:GetService("TweenService"):Create(Root, TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
+    
+    Tween:Play()
+    return Tween
+end
+
+-- [ LOGIC CHÍNH ]
+function MainLogic()
+    while _G.AutoCyborg do
+        task.wait(0.5)
+        local Player = game.Players.LocalPlayer
+        local Character = Player.Character
+        if not Character or not Character:FindFirstChild("HumanoidRootPart") then continue end
+
+        local Fist = Character:FindFirstChild("Fist of Darkness") or Player.Backpack:FindFirstChild("Fist of Darkness")
+        local CoreBrain = Character:FindFirstChild("Core Brain") or Player.Backpack:FindFirstChild("Core Brain")
+
+        -- 11: Nếu có Core Brain -> Đi đổi tộc
+        if CoreBrain then
+            local tw = TweenTo(Pos.CyborgNPC)
+            if tw then tw.Completed:Wait() end
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CyborgProvider", "Buy")
+            _G.AutoCyborg = false
+            break
+        end
+
+        -- 0-5: Lượm rương nếu không có Fist
+        if not Fist then
+            local TargetChest = nil
+            for _, v in pairs(game.Workspace:GetChildren()) do
+                if v.Name:find("Chest") then TargetChest = v break end
+            end
+
+            if TargetChest then
+                local tw = TweenTo(TargetChest.CFrame * CFrame.new(0, 2, 0))
+                if tw then tw.Completed:Wait() end
+                task.wait(0.2)
+            else
+                HopServer() -- 0: Không rương thì đổi server
+                break
+            end
+        else
+            -- 6-7: Đã có Fist -> Mua Chip Law
+            local tw1 = TweenTo(Pos.Aris)
+            if tw1 then tw1.Completed:Wait() end
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
+            
+            -- 8-10: Đi Start Raid và Đánh Law
+            local tw2 = TweenTo(Pos.Button)
+            if tw2 then tw2.Completed:Wait() end
+            
+            -- Tương tác nút (Dùng Remote thay vì click detector cho chắc chắn trên Delta)
+            game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid") 
+
+            local Law = game.Workspace.Enemies:FindFirstChild("Order") or game.Workspace.Enemies:FindFirstChild("Law")
+            if Law and Law:FindFirstChild("HumanoidRootPart") then
+                -- Bay lên đầu Law và giữ khoảng cách
+                TweenTo(Law.HumanoidRootPart.CFrame * CFrame.new(0, 15, 0))
+                -- Fast Attack (Delta thường dùng Remote đánh)
+                game:GetService("VirtualUser"):CaptureController()
+                game:GetService("VirtualUser"):Button1Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            end
+        end
+        
+        -- 12: Kiểm tra sau mỗi vòng nếu không có gì mới thì Hop
+        task.wait(1)
+    end
+end
+
+-- [ GIAO DIỆN ]
+Tabs.Main:AddToggle("AutoCyborg", {
+    Title = "Auto Kaitun Cyborg",
+    Default = false,
+    Callback = function(Value)
+        _G.AutoCyborg = Value
+        if Value then
+            spawn(MainLogic)
+        else
+            -- Dừng bay ngay lập tức
+            local Root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if Root then
+                for _, v in pairs(game:GetService("TweenService"):GetPlayingTweens()) do
+                    v:Cancel()
+                end
+            end
+        end
+    end
+})
 
 Window:SelectTab(1)
-Fluent:Notify({Title = "MISS HUB", Content = "Đã nạp đầy đủ loader và danh sách mupthufix!", Duration = 5})
