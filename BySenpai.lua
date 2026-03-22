@@ -1,7 +1,8 @@
--- [[ 2. Auto Chọn TEAM & ccLoad LIB ]]
+-- [[ 1. LOADx GAME ]]
 repeat task.wait() until game:IsLoaded()
 local player = game.Players.LocalPlayer
 
+-- [[ 2. AUTO CHỌN TEAM ]]
 task.spawn(function()
     if not player.Team then
         pcall(function()
@@ -10,37 +11,42 @@ task.spawn(function()
     end
 end)
 
+-- [[ 3. LOAD LIB ]]
 task.spawn(function()
     pcall(function()
         loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
     end)
 end)
 
--- [[ 3. Tạo UI ]]
+-- [[ 4. LOAD FLUENT ]]
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+
 local Window = Fluent:CreateWindow({
     Title = "MISS HUB - Bloxfruit 2026",
-    SubTitle = "Team: " .. getgenv().Team,
+    SubTitle = "Team: " .. tostring(getgenv().Team),
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = false,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
+    Theme = "Dark"
 })
-local Tabs = { Main = Window:AddTab({ Title = "Auto Cyborg", Icon = "cpu" }) }
 
-local _G = {
+local Tabs = {
+    Main = Window:AddTab({ Title = "Auto Cyborg", Icon = "cpu" })
+}
+
+-- [[ CONFIG ]]
+_G = {
     AutoCyborg = false,
-    TweenSpeed = 180,
+    TweenSpeed = 300,
     CurrentTween = nil
 }
 
 local VisitedChests = {}
 
--- [[ 4. Tween ]]
+-- [[ TWEEN HYBRID ]]
 function TweenTo(TargetCFrame)
     local Character = player.Character
     if not Character then return end
+
     local Root = Character:FindFirstChild("HumanoidRootPart")
     if not Root then return end
 
@@ -50,9 +56,17 @@ function TweenTo(TargetCFrame)
 
     local Distance = (TargetCFrame.Position - Root.Position).Magnitude
 
+    -- gần thì TP
+    if Distance < 300 then
+        Root.CFrame = TargetCFrame
+        return
+    end
+
+    local Time = Distance / _G.TweenSpeed
+
     local Tween = game:GetService("TweenService"):Create(
         Root,
-        TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear),
+        TweenInfo.new(Time, Enum.EasingStyle.Linear),
         {CFrame = TargetCFrame}
     )
 
@@ -60,7 +74,7 @@ function TweenTo(TargetCFrame)
     Tween:Play()
 
     task.spawn(function()
-        while Tween.PlaybackState == Enum.PlaybackState.Playing do
+        while Tween and Tween.PlaybackState == Enum.PlaybackState.Playing do
             for _, v in pairs(Character:GetDescendants()) do
                 if v:IsA("BasePart") then
                     v.CanCollide = false
@@ -73,7 +87,7 @@ function TweenTo(TargetCFrame)
     return Tween
 end
 
--- [[ 5. Tìm rương FIX ]]
+-- [[ FIND CHEST ]]
 function GetRealChest()
     local Root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not Root then return nil end
@@ -85,12 +99,11 @@ function GetRealChest()
         if v:IsA("BasePart")
         and string.find(v.Name, "Chest")
         and v:FindFirstChild("TouchInterest")
-        and v.Transparency < 0.5
         and not VisitedChests[v] then
 
             local dist = (v.Position - Root.Position).Magnitude
 
-            if dist < 3000 and dist < MinDist then
+            if dist < MinDist then
                 MinDist = dist
                 Target = v
             end
@@ -100,10 +113,9 @@ function GetRealChest()
     return Target
 end
 
--- [[ Hop Server FIX ]]
+-- [[ HOP SERVER ]]
 function HopServer()
     VisitedChests = {}
-    Fluent:Notify({Title = "MISS HUB", Content = "Hết rương → Hop...", Duration = 5})
 
     local TPS = game:GetService("TeleportService")
     local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -124,15 +136,11 @@ function HopServer()
     TPS:Teleport(game.PlaceId, player)
 end
 
--- [[ MAIN FIX ]]
+-- [[ MAIN ]]
 function MainLogic()
     repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
-    Fluent:Notify({
-        Title = "MISS HUB",
-        Content = "Đang tìm rương...",
-        Duration = 3
-    })
+    local retry = 0
 
     while _G.AutoCyborg do
         task.wait(0.1)
@@ -144,34 +152,10 @@ function MainLogic()
         local Fist = Character:FindFirstChild("Fist of Darkness")
             or player.Backpack:FindFirstChild("Fist of Darkness")
 
-        if not Fist then
-            local Chest = GetRealChest()
+        -- có fist → raid
+        if Fist then
+            if _G.CurrentTween then _G.CurrentTween:Cancel() end
 
-            if Chest then
-                local tw = TweenTo(Chest.CFrame + Vector3.new(0,3,0))
-
-                if tw then
-                    tw.Completed:Wait()
-
-                    for i = 1,3 do
-                        firetouchinterest(Root, Chest, 0)
-                        firetouchinterest(Root, Chest, 1)
-                        task.wait(0.15)
-                    end
-
-                    VisitedChests[Chest] = true
-                    task.wait(0.3)
-                end
-
-            else
-                task.wait(6)
-                if not GetRealChest() then
-                    HopServer()
-                    break
-                end
-            end
-
-        else
             local tw1 = TweenTo(CFrame.new(-6473, 250, -4493))
             if tw1 then tw1.Completed:Wait() end
 
@@ -179,7 +163,7 @@ function MainLogic()
                 game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
             end)
 
-            task.wait(0.5)
+            task.wait(0.3)
 
             local tw2 = TweenTo(CFrame.new(-6475, 250, -4490))
             if tw2 then tw2.Completed:Wait() end
@@ -187,13 +171,42 @@ function MainLogic()
             pcall(function()
                 game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid")
             end)
+
+            break
+        end
+
+        -- farm chest
+        local Chest = GetRealChest()
+
+        if Chest then
+            retry = 0
+
+            local tw = TweenTo(Chest.CFrame + Vector3.new(0,3,0))
+            if tw then tw.Completed:Wait() end
+
+            for i = 1,3 do
+                firetouchinterest(Root, Chest, 0)
+                firetouchinterest(Root, Chest, 1)
+                task.wait(0.1)
+            end
+
+            VisitedChests[Chest] = true
+
+        else
+            retry += 1
+            task.wait(5)
+
+            if retry >= 5 then
+                HopServer()
+                break
+            end
         end
     end
 end
 
 -- [[ UI ]]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Kaitun Cyborg (FIX NHẶT RƯƠNG)",
+    Title = "Auto Cyborg (Tween Fast)",
     Default = false,
     Callback = function(Value)
         _G.AutoCyborg = Value
@@ -201,9 +214,6 @@ Tabs.Main:AddToggle("AutoCyborg", {
             task.spawn(MainLogic)
         else
             if _G.CurrentTween then _G.CurrentTween:Cancel() end
-            local Root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-            if Root and Root:FindFirstChild("CyborgBV") then Root.CyborgBV:Destroy() end
-            if player.Character then player.Character.Humanoid.PlatformStand = false end
         end
     end
 })
