@@ -1,0 +1,170 @@
+-- [[ MISS HUB - ULTIMATE KAITUN & UI FIX FOR DELTA 2026 ]]
+repeat task.wait() until game:IsLoaded()
+
+-- 1. NẠP THƯ VIỆN GIAO DIỆN (FLUENT) - FIX LỖI KHÔNG HIỆN UI
+local Fluent = nil
+local s1, r1 = pcall(function() 
+    return game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua") 
+end)
+if s1 and r1 ~= "404: Not Found" then 
+    Fluent = loadstring(r1)() 
+else 
+    -- Link dự phòng nếu link chính bị lỗi
+    Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com"))()
+end
+
+-- 2. NẠP DỮ LIỆU MISS HUB (CÓ KIỂM TRA LỖI 404)
+local s2, r2 = pcall(function() 
+    return game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB") 
+end)
+if s2 and r2 ~= "404: Not Found" then pcall(function() loadstring(r2)() end) end
+
+-- [[ DANH SÁCH THỐNG KÊ ĐẢO & CẤP ĐỘ ]]
+local FarmData = {
+    {Min = 1, Max = 15, Name = "Bandit", NPC = CFrame.new(-33, 25, -425), Quest = "BanditQuest", Mob = "Bandit"},
+    {Min = 15, Max = 50, Name = "Sandora", NPC = CFrame.new(-1575, 43, 1025), Quest = "SandoraQuest", Mob = "Desert Bandit"},
+    {Min = 50, Max = 105, Name = "Shells Town", NPC = CFrame.new(-350, 25, -1200), Quest = "ShellsQuest", Mob = "Marine"},
+    {Min = 105, Max = 160, Name = "Zou", NPC = CFrame.new(2500, 50, -3200), Quest = "ZouQuest", Mob = "Mink"},
+    {Min = 160, Max = 325, Name = "Fishman Island", NPC = CFrame.new(6500, -250, -6000), Quest = "FishmanQuest", Mob = "Fishman"}
+}
+
+-- [[ HÀM QUÉT REMOTE THÔNG MINH ]]
+local function GetGPRemote(name)
+    for _, v in pairs(game:GetDescendants()) do
+        if v:IsA("RemoteEvent") and (v.Name:find(name) or v.Name == "Stats" or v.Name == "Quest" or v.Name == "Shop") then
+            return v
+        end
+    end
+end
+
+-- [[ HÀM BAY CHẬM AN TOÀN (NHẢY + 3S + SLOW TWEEN) ]]
+local function SafeFly(targetCFrame)
+    local char = game.Players.LocalPlayer.Character
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if root then
+        char.Humanoid.Jump = true
+        task.wait(3) -- Nhảy sau 3 giây rồi mới bay theo yêu cầu
+        
+        local dist = (root.Position - targetCFrame.p).Magnitude
+        local speed = 80 -- Tốc độ chậm an toàn né Fatal Error
+        
+        char.Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+        local tween = game:GetService("TweenService"):Create(root, TweenInfo.new(dist/speed, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
+        tween:Play()
+        tween.Completed:Wait()
+        char.Humanoid:ChangeState(Enum.HumanoidStateType.Standing)
+        task.wait(1)
+    end
+end
+
+-- 3. CẤU HÌNH CỬA SỔ (Tối ưu để hiện UI trên Delta Mobile)
+local Window = Fluent:CreateWindow({
+    Title = "MISS HUB - FIX UI DELTA",
+    SubTitle = "by giabin987",
+    TabWidth = 180,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = false, -- TẮT ĐỂ HIỆN UI TRÊN MOBILE
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.LeftControl
+})
+
+local Tabs = {
+    Boat = Window:AddTab({ Title = "Farm For Row Boat", Icon = "" }),
+    Level = Window:AddTab({ Title = "Farm LVL", Icon = "" })
+}
+
+-- [[ TAB 1: TWEEN MUA THUYỀN ]]
+Tabs.Boat:AddToggle("TweenBoat", {Title = "Tween Buy Boat (Safe)", Default = false }):OnChanged(function(v)
+    _G.TweenBoat = v
+    spawn(function()
+        while _G.TweenBoat do
+            pcall(function()
+                SafeFly(CFrame.new(-33.5, 25, -425.2))
+                local shop = GetGPRemote("Shop")
+                if shop then shop:FireServer("RowBoat") end
+            end)
+            task.wait(10)
+        end
+    end)
+end)
+
+-- [[ TAB 2: FARM LVL - KAITUN THÔNG MINH ]]
+
+-- A. CHỨC NĂNG KAITUN CHÍNH
+Tabs.Level:AddToggle("AutoFarm", {Title = "Auto Farm Level (Kaitun)", Default = false }):OnChanged(function(v)
+    _G.AutoFarm = v
+    spawn(function()
+        while _G.AutoFarm do
+            pcall(function()
+                local lp = game.Players.LocalPlayer
+                -- Tự quét Level
+                local lv = 1
+                for _, val in pairs(lp:GetDescendants()) do
+                    if val.Name == "Level" and (val:IsA("IntValue") or val:IsA("NumberValue")) then lv = val.Value break end
+                end
+                
+                -- Tìm đảo
+                local target = nil
+                for _, data in pairs(FarmData) do
+                    if lv >= data.Min and lv <= data.Max then target = data break end
+                end
+
+                if target then
+                    if not lp.PlayerGui:FindFirstChild("QuestGui") then
+                        SafeFly(target.NPC)
+                        local qRemote = GetGPRemote("Quest")
+                        if qRemote then qRemote:FireServer(target.Quest) end
+                    else
+                        for _, mob in pairs(game.Workspace.NPCs:GetChildren()) do
+                            if mob.Name == target.Mob and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                                SafeFly(mob.HumanoidRootPart.CFrame * CFrame.new(0, 7, 0))
+                                game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
+                                break
+                            end
+                        end
+                    end
+                end
+            end)
+            task.wait(1)
+        end
+    end)
+end)
+
+-- B. BỔ TRỢ (Strength & Boost FPS)
+Tabs.Level:AddToggle("AutoStrength", {Title = "Auto Stats Strength", Default = false }):OnChanged(function(v)
+    _G.AutoStrength = v
+    spawn(function()
+        while _G.AutoStrength do
+            local rem = GetGPRemote("Stats")
+            if rem then rem:FireServer("Strength", 1) end
+            task.wait(0.3)
+        end
+    end)
+end)
+
+Tabs.Level:AddToggle("BoostFps", {Title = "Boost Fps", Default = false }):OnChanged(function(v)
+    if v then
+        for _, obj in pairs(game:GetDescendants()) do
+            if obj:IsA("Part") then obj.Material = Enum.Material.SmoothPlastic end
+            if obj:IsA("Decal") then obj.Transparency = 1 end
+        end
+    end
+end)
+
+-- C. LEVEL CHECK
+local LevelLabel = Tabs.Level:AddParagraph({Title = "Level Check", Content = "Checking..."})
+spawn(function()
+    while true do
+        pcall(function()
+            local lv = 1
+            for _, val in pairs(game.Players.LocalPlayer:GetDescendants()) do
+                if val.Name == "Level" then lv = val.Value break end
+            end
+            LevelLabel:SetDesc("Level hiện tại: " .. tostring(lv))
+        end)
+        task.wait(3)
+    end
+end)
+
+Window:SelectTab(2)
+Fluent:Notify({Title = "MISS HUB", Content = "Đã FIX UI và Kaitun thành công!", Duration = 5})
