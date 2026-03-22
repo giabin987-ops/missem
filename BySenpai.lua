@@ -1,6 +1,6 @@
 if not game:IsLoaded() then game.Loaded:Wait() end
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local ScreenGui = loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%"))()
+local ScreenGui = loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
 
 local Window = Fluent:CreateWindow({
     Title = "MISS HUB - Bloxfruit 2026",
