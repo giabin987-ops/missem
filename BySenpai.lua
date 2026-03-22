@@ -1,4 +1,4 @@
--- [ 1. LOAD SCREEN GUI / MISS HUB ]
+-- [ 1. LOAD MISS HUB ]
 pcall(function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
 end)
@@ -23,26 +23,29 @@ local Tabs = {
 
 local _G = {
     AutoCyborg = false,
-    TweenSpeed = 150, -- Bay nhanh hơn (Fast Farm)
+    TweenSpeed = 150, 
     CurrentTween = nil
 }
 
+-- [ FIX LỖI BAY QUA LẠI: DANH SÁCH ĐEN RƯƠNG ]
 local VisitedChests = {}
+
 local Pos = {
     Aris = CFrame.new(-6473, 250, -4493),
     Button = CFrame.new(-6475, 250, -4490),
     CyborgNPC = CFrame.new(-6371, 236, -4051),
 }
 
--- [ HÀM DI CHUYỂN TOÀN BẢN ĐỒ - CHỐNG RƠI NƯỚC ]
+-- [ HÀM DI CHUYỂN SIÊU MƯỢT & XUYÊN TƯỜNG ]
 function TweenTo(TargetCFrame)
-    local Root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    local Hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    local Character = game.Players.LocalPlayer.Character
+    local Root = Character:FindFirstChild("HumanoidRootPart")
+    local Hum = Character:FindFirstChild("Humanoid")
     if not Root or not Hum then return end
     
     if _G.CurrentTween then _G.CurrentTween:Cancel() end
 
-    -- KHÓA ĐỘ CAO TUYỆT ĐỐI (FIX LỖI CHẠM NƯỚC / GIẬT)
+    -- KHÓA TRỌNG LỰC ĐỂ KHÔNG BỊ RƠI XUỐNG ĐẤT/NƯỚC
     local BV = Root:FindFirstChild("CyborgBV") or Instance.new("BodyVelocity")
     BV.Name = "CyborgBV"
     BV.Parent = Root
@@ -55,21 +58,35 @@ function TweenTo(TargetCFrame)
     _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
     _G.CurrentTween:Play()
     
+    -- XUYÊN TƯỜNG (NOCLIP) KHI BAY
+    task.spawn(function()
+        while _G.CurrentTween and _G.CurrentTween.PlaybackState == Enum.PlaybackState.Playing do
+            for _, v in pairs(Character:GetDescendants()) do
+                if v:IsA("BasePart") then v.CanCollide = false end
+            end
+            task.wait()
+        end
+        if Hum then Hum.PlatformStand = false end
+    end)
+    
     return _G.CurrentTween
 end
 
--- [ HÀM QUÉT TOÀN MAP - FIX LỖI 1 KHU VỰC ]
+-- [ HÀM QUÉT TOÀN BẢN ĐỒ - FIX LỖI 1 KHU VỰC ]
 function GetGlobalChest()
     local Target = nil
     local MaxDist = math.huge
-    -- GetDescendants sẽ tìm rương ở TẤT CẢ các đảo (Islands, Map Folder...)
+    
+    -- Tìm rương trong toàn bộ bản đồ kể cả rương bị ẩn sâu trong folder Map
     for _, v in pairs(game.Workspace:GetDescendants()) do
         if (v.Name:find("Chest") or v.Name:find("Box")) and v:IsA("BasePart") and not VisitedChests[v] then
-            local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-            -- Không giới hạn tầm nhìn -> Tìm rương ở mọi đảo
-            if Dist < MaxDist then
-                MaxDist = Dist
-                Target = v
+            -- Chỉ quét rương còn tồn tại
+            if v.Transparency < 1 then 
+                local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                if Dist < MaxDist then
+                    MaxDist = Dist
+                    Target = v
+                end
             end
         end
     end
@@ -98,11 +115,6 @@ function MainLogic()
         local C = P.Character
         if not C or not C:FindFirstChild("HumanoidRootPart") then continue end
 
-        -- Noclip để không bị khựng khi va chạm đảo
-        for _, v in pairs(C:GetChildren()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-
         local Fist = C:FindFirstChild("Fist of Darkness") or P.Backpack:FindFirstChild("Fist of Darkness")
         local Core = C:FindFirstChild("Core Brain") or P.Backpack:FindFirstChild("Core Brain")
 
@@ -113,19 +125,21 @@ function MainLogic()
         end
 
         if not Fist then
-            local Chest = GetGlobalChest() -- Tìm rương toàn map
+            local Chest = GetGlobalChest()
             if Chest then
-                local tw = TweenTo(Chest.CFrame * CFrame.new(0, 2, 0))
+                local tw = TweenTo(Chest.CFrame * CFrame.new(0, 1, 0))
                 if tw then 
                     tw.Completed:Wait() 
+                    -- FIX LỖI BAY QUA LẠI: Đánh dấu đã lượm ngay lập tức
+                    VisitedChests[Chest] = true
                     task.wait(0.2) 
-                    VisitedChests[Chest] = true -- Đánh dấu lượm xong
                 end
             else
+                -- Nếu hết rương toàn map thì đổi server
                 HopServer() break
             end
         else
-            -- Raid Law
+            -- Raid Law (Tự động thực hiện khi có Fist)
             TweenTo(Pos.Aris).Completed:Wait()
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
             task.wait(0.5)
@@ -143,7 +157,7 @@ end
 
 -- [ UI ]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Kaitun Cyborg (FIX TOÀN MAP)",
+    Title = "Auto Kaitun Cyborg (FIX LỖI RƯƠNG)",
     Default = false,
     Callback = function(Value)
         _G.AutoCyborg = Value
@@ -154,12 +168,7 @@ Tabs.Main:AddToggle("AutoCyborg", {
             local Root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
             if Root and Root:FindFirstChild("CyborgBV") then Root.CyborgBV:Destroy() end
             local Hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-            if Hum then 
-                Hum.PlatformStand = false
-                for _, v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
-                    if v:IsA("BasePart") then v.CanCollide = true end
-                end
-            end
+            if Hum then Hum.PlatformStand = false end
         end
     end
 })
