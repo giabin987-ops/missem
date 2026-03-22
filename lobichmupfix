@@ -1,6 +1,7 @@
+-- [[ MISS HUB - GPO ULTIMATE FULL FIXED 2026 ]]
 repeat task.wait() until game:IsLoaded()
 
--- 1. NẠP THƯ VIỆN GIAO DIỆN (FLUENT) - FIX LỖI KHÔNG HIỆN UI
+-- 1. NẠP THƯ VIỆN GIAO DIỆN (FLUENT)
 local Fluent = nil
 local s1, r1 = pcall(function() 
     return game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua") 
@@ -8,91 +9,87 @@ end)
 if s1 and r1 ~= "404: Not Found" then 
     Fluent = loadstring(r1)() 
 else 
-    -- Link dự phòng nếu link chính bị lỗi (Đã fix link Fluent dự phòng)
     Fluent = loadstring(game:HttpGet("https://raw.githubusercontent.com"))()
 end
 
--- 2. NẠP DỮ LIỆU MISS HUB (CÓ KIỂM TRA LỖI 404)
+-- 2. NẠP DỮ LIỆU MISS HUB (LOADER CHÍNH)
 local s2, r2 = pcall(function() 
     return game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB") 
 end)
 if s2 and r2 ~= "404: Not Found" then pcall(function() loadstring(r2)() end) end
 
--- [[ DANH SÁCH ĐẢO GPO SEA 1 ]]
-local FarmData = {
-    {Min = 1, Max = 15, Name = "Bandit", NPC = CFrame.new(-33, 25, -425), Quest = "BanditQuest", Mob = "Bandit"},
-    {Min = 15, Max = 50, Name = "Sandora", NPC = CFrame.new(-1575, 43, 1025), Quest = "SandoraQuest", Mob = "Desert Bandit"},
-    {Min = 50, Max = 105, Name = "Shells Town", NPC = CFrame.new(-350, 25, -1200), Quest = "ShellsQuest", Mob = "Marine"},
-    {Min = 105, Max = 160, Name = "Zou", NPC = CFrame.new(2500, 50, -3200), Quest = "ZouQuest", Mob = "Mink"},
-    {Min = 160, Max = 325, Name = "Fishman Island", NPC = CFrame.new(6500, -250, -6000), Quest = "FishmanQuest", Mob = "Fishman"}
-}
+-- 3. NẠP DANH SÁCH NPC TỪ MUPTHUFIX (THAY THẾ FARMDATA)
+local FarmData = {}
+local s3, r3 = pcall(function() 
+    return loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/mupthufix"))() 
+end)
+if s3 and type(r3) == "table" then 
+    FarmData = r3 
+else 
+    warn("MISS HUB: Không thể tải danh sách mupthufix!")
+end
 
--- [[ HÀM BAY FIX: NHẢY MỖI 4S + DỪNG LẬP TỨC ]]
+-- [[ HÀM GỬI LỆNH THÔNG MINH - CHỐNG KICK NSE1 (REMOTE FUNCTION) ]]
+local function SafeRemote(remote, ...)
+    if not remote then return end
+    if remote:IsA("RemoteEvent") then 
+        remote:FireServer(...)
+    elseif remote:IsA("RemoteFunction") then 
+        remote:InvokeServer(...) 
+    end
+end
+
+-- [[ HÀM BAY FIX: NHẢY MỖI 4 GIÂY + DỪNG LẬP TỨC ]]
 local function SafeFly(targetCFrame)
     local lp = game.Players.LocalPlayer
     local lastJump = tick()
-    
     while _G.AutoFarm or _G.TweenBoat do
         task.wait()
-        local root = lp.Character and lp.Character:FindFirstChild("HumanoidRootPart")
-        if not root or not (_G.AutoFarm or _G.TweenBoat) then break end
+        local char = lp.Character
+        local root = char and char:FindFirstChild("HumanoidRootPart")
         
-        local dist = (root.Position - targetCFrame.p).Magnitude
-        if dist < 10 then break end 
-
-        -- Fix lỗi bay: Nhảy mỗi 4 giây
-        if tick() - lastJump >= 4 then
-            lp.Character.Humanoid.Jump = true
-            lastJump = tick()
+        -- DỪNG NGAY LẬP TỨC KHI TẮT NÚT
+        if not root or not (_G.AutoFarm or _G.TweenBoat) then break end
+        if (root.Position - targetCFrame.p).Magnitude < 15 then break end 
+        
+        -- FIX BAY: TỰ ĐỘNG NHẢY MỖI 4 GIÂY ĐỂ NÉ ANTICHEAT
+        if tick() - lastJump >= 4 then 
+            char.Humanoid.Jump = true 
+            lastJump = tick() 
         end
         
-        -- Bay chậm mượt
-        root.CFrame = root.CFrame + (targetCFrame.p - root.Position).Unit * 1.8
+        -- BAY CHẬM AN TOÀN (TỐC ĐỘ 80)
+        root.CFrame = root.CFrame + (targetCFrame.p - root.Position).Unit * 1.9
         root.Velocity = Vector3.new(0,0,0)
     end
 end
 
--- [[ HÀM TỰ CẦM NẮM ĐẤM ]]
+-- [[ HÀM TỰ CẦM NẮM ĐẤM (COMBAT) ]]
 local function EquipCombat()
     local lp = game.Players.LocalPlayer
     local combat = lp.Backpack:FindFirstChild("Combat") or lp.Character:FindFirstChild("Combat")
-    if combat then lp.Character.Humanoid:EquipTool(combat) end
+    if combat and not lp.Character:FindFirstChild("Combat") then 
+        lp.Character.Humanoid:EquipTool(combat) 
+    end
 end
 
--- 3. CẤU HÌNH CỬA SỔ UI
+-- [[ CẤU HÌNH GIAO DIỆN UI ]]
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - FIXED GPO",
+    Title = "MISS HUB - FULL FIXED 2026",
     SubTitle = "by giabin987",
-    TabWidth = 180,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = false,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl
+    TabWidth = 180, Size = UDim2.fromOffset(580, 460),
+    Acrylic = false, Theme = "Dark", MinimizeKey = Enum.KeyCode.LeftControl
 })
 
 local Tabs = {
-    Boat = Window:AddTab({ Title = "Row Boat", Icon = "ship" }),
-    Level = Window:AddTab({ Title = "Kaitun", Icon = "swords" })
+    Level = Window:AddTab({ Title = "Kaitun Level", Icon = "swords" }),
+    Settings = Window:AddTab({ Title = "Settings", Icon = "settings" })
 }
 
--- [[ FIX TWEEN MUA THUYỀN ]]
-Tabs.Boat:AddToggle("TweenBoat", {Title = "Auto Buy Boat (RowBoat)", Default = false }):OnChanged(function(v)
-    _G.TweenBoat = v
-    if v then
-        task.spawn(function()
-            SafeFly(CFrame.new(-33.5, 25, -425.2))
-            if _G.TweenBoat then
-                local rem = game:GetService("ReplicatedStorage"):FindFirstChild("Events"):FindFirstChild("Shop")
-                if rem then rem:FireServer("RowBoat") end
-                _G.TweenBoat = false -- Mua xong tự dừng
-            end
-        end)
-    end
-end)
+-- [[ LEVEL CHECK PARAGRAPH ]]
+local LevelLabel = Tabs.Level:AddParagraph({Title = "Level Status", Content = "Checking..."})
 
--- [[ FIX AUTO FARM & LEVEL CHECK ]]
-local LevelLabel = Tabs.Level:AddParagraph({Title = "Level Check", Content = "Checking..."})
-
+-- [[ CHỨC NĂNG KAITUN LEVEL - DÙNG DANH SÁCH MUPTHUFIX ]]
 Tabs.Level:AddToggle("AutoFarm", {Title = "Auto Farm Level", Default = false }):OnChanged(function(v)
     _G.AutoFarm = v
     if v then
@@ -100,22 +97,27 @@ Tabs.Level:AddToggle("AutoFarm", {Title = "Auto Farm Level", Default = false }):
             while _G.AutoFarm do
                 pcall(function()
                     local lp = game.Players.LocalPlayer
-                    local lv = lp.Data.Level.Value
+                    -- Fix Check Level hoạt động chuẩn GPO 2026
+                    local lv = lp:WaitForChild("Data"):WaitForChild("Level").Value
                     LevelLabel:SetDesc("Level hiện tại: " .. tostring(lv))
                     
                     local target = nil
-                    for _, d in pairs(FarmData) do if lv >= d.Min and lv <= d.Max then target = d break end end
+                    for _, d in pairs(FarmData) do 
+                        if lv >= d.Min and lv <= d.Max then target = d break end 
+                    end
 
                     if target then
-                        EquipCombat() -- Tự cầm đấm
+                        EquipCombat() -- TỰ CẦM ĐẤM
                         if not lp.PlayerGui:FindFirstChild("QuestGui") then
-                            SafeFly(target.NPC)
+                            SafeFly(target.NPC) -- BAY ĐẾN NPC
                             local qRem = game:GetService("ReplicatedStorage"):FindFirstChild("Events"):FindFirstChild("Quest")
-                            if qRem then qRem:FireServer(target.Quest) end
+                            SafeRemote(qRem, target.Quest) -- FIX LỖI FIRESERVER/INVOKESERVER
                         else
-                            -- Tìm quái và đánh
+                            -- TÌM QUÁI VÀ FARM
+                            local mobFound = false
                             for _, mob in pairs(game.Workspace.NPCs:GetChildren()) do
                                 if mob.Name:find(target.Mob) and mob:FindFirstChild("Humanoid") and mob.Humanoid.Health > 0 then
+                                    mobFound = true
                                     while _G.AutoFarm and mob.Humanoid.Health > 0 do
                                         lp.Character.HumanoidRootPart.CFrame = mob.HumanoidRootPart.CFrame * CFrame.new(0, 8, 0)
                                         game:GetService("VirtualUser"):ClickButton1(Vector2.new(0,0))
@@ -124,6 +126,8 @@ Tabs.Level:AddToggle("AutoFarm", {Title = "Auto Farm Level", Default = false }):
                                     break
                                 end
                             end
+                            -- NẾU QUÁI CHƯA SPAWN THÌ BAY ĐẾN ĐIỂM MOBPOS CHỜ
+                            if not mobFound and target.MobPos then SafeFly(target.MobPos) end
                         end
                     end
                 end)
@@ -133,5 +137,19 @@ Tabs.Level:AddToggle("AutoFarm", {Title = "Auto Farm Level", Default = false }):
     end
 end)
 
-Window:SelectTab(2)
-Fluent:Notify({Title = "MISS HUB", Content = "Đã FIX xong! Chúc bạn chơi vui vẻ.", Duration = 5})
+-- [[ CHỨC NĂNG BOOST FPS ]]
+Tabs.Settings:AddToggle("BoostFps", {Title = "Optimize FPS", Default = false }):OnChanged(function(v)
+    if v then
+        for _, obj in pairs(game:GetDescendants()) do
+            if obj:IsA("Part") or obj:IsA("MeshPart") then
+                obj.Material = Enum.Material.SmoothPlastic
+            elseif obj:IsA("Decal") then
+                obj.Transparency = 1
+            end
+        end
+        game:GetService("Lighting").GlobalShadows = false
+    end
+end)
+
+Window:SelectTab(1)
+Fluent:Notify({Title = "MISS HUB", Content = "Đã nạp đầy đủ loader và danh sách mupthufix!", Duration = 5})
