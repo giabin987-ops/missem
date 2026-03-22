@@ -1,6 +1,6 @@
--- [ 1. LOAD MISS HUB ]
+-- [ 1. LOAD MISS fixHUB ]
 pcall(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
+    loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 end)
 
 -- [ 2. KHỞI TẠO FLUENT ]
@@ -23,34 +23,54 @@ local Tabs = {
 
 local _G = {
     AutoCyborg = false,
-    TweenSpeed = 180, -- Tăng tốc độ bay cực nhanh
+    TweenSpeed = 180, 
     CurrentTween = nil
 }
 
 local VisitedChests = {}
 
--- [ HÀM QUÉT SIÊU TỐC - FIX LỖI BÁO HẾT RƯƠNG ]
-function GetFastChest()
-    local Target = nil
-    local MaxDist = math.huge
+-- [ HÀM HOP SERVER FIXED 100% CHO DELTA ]
+function HopServer()
+    Fluent:Notify({Title = "MISS HUB", Content = "Đang đổi server để tìm rương...", Duration = 10})
     
-    -- Quét toàn bộ map ngay lập tức
-    local allObjects = game.Workspace:GetDescendants()
+    local Http = game:GetService("HttpService")
+    local TPS = game:GetService("TeleportService")
+    local PlaceId = game.PlaceId
+    local JobId = game.JobId
     
-    for i = 1, #allObjects do
-        local v = allObjects[i]
-        -- Chỉ lọc đúng rương và rương phải có thực (không tàng hình)
-        if (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") and v:IsA("BasePart") and not VisitedChests[v] then
-            if v:FindFirstChild("TouchInterest") then 
-                local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
-                if Dist < MaxDist then
-                    MaxDist = Dist
-                    Target = v
+    -- API lấy danh sách server mới nhất
+    local Api = "https://games.roblox.com"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+    
+    local function TryTeleport()
+        local success, result = pcall(function()
+            return Http:JSONDecode(game:HttpGet(Api))
+        end)
+        
+        if success and result and result.data then
+            for _, v in pairs(result.data) do
+                if v.playing < v.maxPlayers and v.id ~= JobId then
+                    -- Thực hiện dịch chuyển
+                    TPS:TeleportToPlaceInstance(PlaceId, v.id, game.Players.LocalPlayer)
+                    return true
                 end
             end
         end
+        return false
     end
-    return Target
+
+    -- Thử đổi server mới
+    if not TryTeleport() then
+        -- LỆNH DỰ PHÒNG: Nếu API lỗi, dùng lệnh Teleport cơ bản của Roblox
+        task.wait(2)
+        TPS:Teleport(PlaceId, game.Players.LocalPlayer)
+    end
+    
+    -- Nếu vẫn kẹt sau 10 giây, ép Rejoin server hiện tại
+    task.delay(10, function()
+        if game.JobId == JobId then
+            TPS:TeleportToPlaceInstance(PlaceId, JobId, game.Players.LocalPlayer)
+        end
+    end)
 end
 
 function TweenTo(TargetCFrame)
@@ -58,7 +78,6 @@ function TweenTo(TargetCFrame)
     if not Root then return end
     if _G.CurrentTween then _G.CurrentTween:Cancel() end
 
-    -- Khóa trọng lực để bay thẳng
     local BV = Root:FindFirstChild("CyborgBV") or Instance.new("BodyVelocity")
     BV.Name = "CyborgBV"
     BV.Parent = Root
@@ -71,7 +90,6 @@ function TweenTo(TargetCFrame)
     _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
     _G.CurrentTween:Play()
     
-    -- Noclip xuyên thấu
     task.spawn(function()
         while _G.CurrentTween and _G.CurrentTween.PlaybackState == Enum.PlaybackState.Playing do
             for _, v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
@@ -83,25 +101,29 @@ function TweenTo(TargetCFrame)
     return _G.CurrentTween
 end
 
-function HopServer()
-    Fluent:Notify({Title = "MISS HUB", Content = "Server hết rương thật sự! Đang Hop...", Duration = 3})
-    local TPS = game:GetService("TeleportService")
-    local Api = "https://games.roblox.com"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-    local s, r = pcall(function() return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api)) end)
-    if s and r.data then
-        for _, v in pairs(r.data) do
-            if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                TPS:TeleportToPlaceInstance(game.PlaceId, v.id, game.Players.LocalPlayer)
-                break
+function GetFastChest()
+    local Target = nil
+    local MaxDist = math.huge
+    local allObjects = game.Workspace:GetDescendants()
+    
+    for i = 1, #allObjects do
+        local v = allObjects[i]
+        if (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") and v:IsA("BasePart") and not VisitedChests[v] then
+            if v:FindFirstChild("TouchInterest") and v.Transparency < 0.5 then 
+                local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+                if Dist < MaxDist then
+                    MaxDist = Dist
+                    Target = v
+                end
             end
         end
     end
+    return Target
 end
 
--- [ LOGIC CHÍNH ]
 function MainLogic()
     while _G.AutoCyborg do
-        task.wait(0.05) -- Tốc độ nhận diện cực cao
+        task.wait(0.05)
         local P = game.Players.LocalPlayer
         local C = P.Character
         if not C or not C:FindFirstChild("HumanoidRootPart") then continue end
@@ -125,19 +147,19 @@ function MainLogic()
                     task.wait(0.05) 
                 end
             else
-                -- Nếu không tìm thấy rương, đợi thêm 1 giây nữa để chắc chắn do map chưa load
-                task.wait(1.5)
+                -- Đợi 2 giây load map trước khi thực sự Hop
+                task.wait(2)
                 Chest = GetFastChest()
                 if not Chest then
                     HopServer()
-                    break
+                    break 
                 end
             end
         else
             -- Raid Law
             TweenTo(CFrame.new(-6473, 250, -4493)).Completed:Wait()
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
-            task.wait(0.3)
+            task.wait(0.5)
             TweenTo(CFrame.new(-6475, 250, -4490)).Completed:Wait()
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid") 
             
@@ -150,9 +172,8 @@ function MainLogic()
     end
 end
 
--- [ UI ]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Kaitun Cyborg (TỐC ĐỘ CAO)",
+    Title = "Auto Kaitun Cyborg",
     Default = false,
     Callback = function(Value)
         _G.AutoCyborg = Value
