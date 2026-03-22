@@ -1,9 +1,9 @@
--- [ 1. LOAD MISS bHUB ]
+-- [ LOAD MISS HUB ]
 pcall(function()
     loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
 end)
 
--- [ 2. KHỞI TẠO FLUENT ]
+-- [ KHỞI TẠO FLUENT ]
 repeat task.wait() until game:IsLoaded()
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
@@ -23,7 +23,7 @@ local Tabs = {
 
 local _G = {
     AutoCyborg = false,
-    TweenSpeed = 80, -- Tốc độ chuẩn mượt 2026
+    TweenSpeed = 90, -- Tốc độ tối ưu để bay xa
     CurrentTween = nil
 }
 
@@ -34,66 +34,42 @@ local Pos = {
     CyborgNPC = CFrame.new(-6371, 236, -4051),
 }
 
--- [ HÀM DI CHUYỂN SIÊU MƯỢT - KHÔNG GIẬT ]
-function TweenTo(TargetCFrame)
-    local Character = game.Players.LocalPlayer.Character
-    local Root = Character:FindFirstChild("HumanoidRootPart")
-    local Hum = Character:FindFirstChild("Humanoid")
-    
-    if not Root or not Hum then return end
-    
-    -- Dừng Tween cũ
-    if _G.CurrentTween then _G.CurrentTween:Cancel() end
-
-    -- FIX GIẬT: Khóa vật lý & Trọng lực
-    Root.Velocity = Vector3.new(0, 0, 0)
-    Hum.PlatformStand = true -- Tắt animation rơi để không bị giật lên xuống
-
-    local Distance = (TargetCFrame.Position - Root.Position).Magnitude
-    local TweenTime = Distance / _G.TweenSpeed
-    
-    _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new(TweenTime, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
-    _G.CurrentTween:Play()
-
-    -- Trả lại trạng thái sau khi hoàn thành
-    _G.CurrentTween.Completed:Connect(function()
-        if Hum then Hum.PlatformStand = false end
-        if Root then Root.Velocity = Vector3.new(0, 0, 0) end
-    end)
-
-    return _G.CurrentTween
-end
-
--- [ ANTI-LAG / NO CLIP KHI BAY ]
-task.spawn(function()
-    while task.wait() do
-        if _G.AutoCyborg and _G.CurrentTween then
-            local Char = game.Players.LocalPlayer.Character
-            if Char then
-                for _, v in pairs(Char:GetDescendants()) do
-                    if v:IsA("BasePart") then v.CanCollide = false end
-                end
-            end
-            -- Khóa rơi khi đang bay (Double Check)
-            game.Players.LocalPlayer.Character.Humanoid.PlatformStand = true
-        end
-    end
-end)
-
--- [ QUÉT RƯƠNG MỚI (BLACKLIST) ]
-function GetNewChest()
-    local Nearest = nil
+-- [ HÀM QUÉT TOÀN BẢN ĐỒ - FIX LỖI 1 KHU VỰC ]
+function GetGlobalChest()
+    local NearestChest = nil
     local MaxDist = math.huge
+    
+    -- Quét Descendants giúp tìm rương ở TẤT CẢ folder (Map, Sea, Islands...)
     for _, v in pairs(game.Workspace:GetDescendants()) do
         if (v.Name:find("Chest") or v.Name:find("Box")) and v:IsA("BasePart") and not VisitedChests[v] then
             local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            -- Không giới hạn tầm nhìn, rương xa nhất cũng sẽ tìm thấy
             if Dist < MaxDist then
                 MaxDist = Dist
-                Nearest = v
+                NearestChest = v
             end
         end
     end
-    return Nearest
+    return NearestChest
+end
+
+-- [ HÀM DI CHUYỂN SIÊU MƯỢT & CHỐNG RƠI ]
+function TweenTo(TargetCFrame)
+    local Root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    local Hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    if not Root then return end
+    
+    if _G.CurrentTween then _G.CurrentTween:Cancel() end
+    
+    -- Fix lỗi giật lên xuống/rơi đất bằng cách khóa vật lý
+    Root.Velocity = Vector3.new(0,0,0)
+    Hum.PlatformStand = true 
+
+    local Distance = (TargetCFrame.Position - Root.Position).Magnitude
+    _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
+    _G.CurrentTween:Play()
+    
+    return _G.CurrentTween
 end
 
 -- [ LOGIC CHÍNH ]
@@ -104,10 +80,14 @@ function MainLogic()
         local C = P.Character
         if not C or not C:FindFirstChild("HumanoidRootPart") then continue end
 
+        -- Noclip xuyên tường khi bay
+        for _, v in pairs(C:GetChildren()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
+        end
+
         local Fist = C:FindFirstChild("Fist of Darkness") or P.Backpack:FindFirstChild("Fist of Darkness")
         local Core = C:FindFirstChild("Core Brain") or P.Backpack:FindFirstChild("Core Brain")
 
-        -- 11: Core Brain
         if Core then
             TweenTo(Pos.CyborgNPC).Completed:Wait()
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CyborgProvider", "Buy")
@@ -115,16 +95,16 @@ function MainLogic()
         end
 
         if not Fist then
-            local Chest = GetNewChest()
+            local Chest = GetGlobalChest() -- Gọi hàm quét toàn map
             if Chest then
                 local tw = TweenTo(Chest.CFrame * CFrame.new(0, 2, 0))
                 if tw then 
                     tw.Completed:Wait() 
                     task.wait(0.5) 
-                    VisitedChests[Chest] = true -- Không quay lại rương cũ
+                    VisitedChests[Chest] = true -- Đánh dấu đã lượm
                 end
             else
-                -- Hop Server (Hàm Hop đã có ở các bản trước, bạn giữ nguyên logic hoặc dùng bản này)
+                -- Nếu quét TOÀN MAP không còn rương nào mới Hop Server
                 pcall(function()
                     local TPS = game:GetService("TeleportService")
                     local Api = "https://games.roblox.com"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -139,7 +119,7 @@ function MainLogic()
                 break
             end
         else
-            -- Lộ trình Raid Law
+            -- Raid Law
             TweenTo(Pos.Aris).Completed:Wait()
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
             task.wait(0.5)
@@ -157,7 +137,7 @@ end
 
 -- [ GIAO DIỆN ]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Kaitun Cyborg (FIX GIẬT)",
+    Title = "Auto Kaitun Cyborg (FIX TOÀN MAP)",
     Default = false,
     Callback = function(Value)
         _G.AutoCyborg = Value
@@ -167,6 +147,9 @@ Tabs.Main:AddToggle("AutoCyborg", {
             if _G.CurrentTween then _G.CurrentTween:Cancel() end
             local Hum = game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
             if Hum then Hum.PlatformStand = false end
+            for _, v in pairs(game.Players.LocalPlayer.Character:GetChildren()) do
+                if v:IsA("BasePart") then v.CanCollide = true end
+            end
         end
     end
 })
