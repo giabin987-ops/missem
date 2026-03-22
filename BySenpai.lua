@@ -1,8 +1,9 @@
+if not game:IsLoaded() then game.Loaded:Wait() end
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 local ScreenGui = loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - Bloxfruit",
+    Title = "MISS HUB - Bloxfruit 2026",
     SubTitle = "by Senpai",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -17,38 +18,56 @@ local Tabs = {
 
 local _G = {
     AutoCyborg = false,
-    TweenSpeed = 75,
-    CurrentTween = nil -- Biến quản lý tween để fix lỗi GetPlayingTweens
+    TweenSpeed = 85,
+    CurrentTween = nil
 }
 
+-- [ TỌA ĐỘ ]
 local Pos = {
     Aris = CFrame.new(-6473, 250, -4493),
     Button = CFrame.new(-6475, 250, -4490),
     CyborgNPC = CFrame.new(-6371, 236, -4051),
 }
 
--- [ HÀM DI CHUYỂN FIXED ]
-function TweenTo(TargetCFrame)
-    local Character = game.Players.LocalPlayer.Character
-    if not Character or not Character:FindFirstChild("HumanoidRootPart") then return end
-    local Root = Character.HumanoidRootPart
+-- [ HÀM QUÉT RƯƠNG MẠNH MẼ - FIX LỖI ĐỨNG YÊN ]
+function GetNearestChest()
+    local NearestChest = nil
+    local MaxDist = math.huge
     
-    -- Dừng tween cũ trước khi tạo tween mới (Fix lỗi đứng yên)
+    -- Quét toàn bộ Workspace để tìm rương (vì rương hay nằm trong folder Map)
+    for _, v in pairs(game.Workspace:GetDescendants()) do
+        if (v.Name:find("Chest") or v.Name:find("Box")) and v:IsA("BasePart") then
+            local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
+            if Dist < MaxDist then
+                MaxDist = Dist
+                NearestChest = v
+            end
+        end
+    end
+    return NearestChest
+end
+
+-- [ HÀM DI CHUYỂN MƯỢT ]
+function TweenTo(TargetCFrame)
+    local Root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not Root then return end
+    
     if _G.CurrentTween then _G.CurrentTween:Cancel() end
     
     local Distance = (TargetCFrame.Position - Root.Position).Magnitude
     _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
     _G.CurrentTween:Play()
-    
     return _G.CurrentTween
 end
 
+-- [ HÀM ĐỔI SERVER ]
 function HopServer()
+    Fluent:Notify({Title = "MISS HUB", Content = "Đang đổi Server...", Duration = 3})
     local TPS = game:GetService("TeleportService")
     local Api = "https://games.roblox.com"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-    local success, result = pcall(function() return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api)) end)
-    if success and result.data then
-        for _, v in pairs(result.data) do
+    local s, r = pcall(function() return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api)) end)
+    if s and r.data then
+        for _, v in pairs(r.data) do
             if v.playing < v.maxPlayers and v.id ~= game.JobId then
                 TPS:TeleportToPlaceInstance(game.PlaceId, v.id, game.Players.LocalPlayer)
                 break
@@ -60,45 +79,39 @@ end
 -- [ LOGIC CHÍNH ]
 function MainLogic()
     while _G.AutoCyborg do
-        task.wait(0.5)
-        local Player = game.Players.LocalPlayer
-        local Character = Player.Character
-        if not Character or not Character:FindFirstChild("HumanoidRootPart") then continue end
+        task.wait(1)
+        local P = game.Players.LocalPlayer
+        local C = P.Character
+        if not C or not C:FindFirstChild("HumanoidRootPart") then continue end
 
-        local Fist = Character:FindFirstChild("Fist of Darkness") or Player.Backpack:FindFirstChild("Fist of Darkness")
-        local CoreBrain = Character:FindFirstChild("Core Brain") or Player.Backpack:FindFirstChild("Core Brain")
+        local Fist = C:FindFirstChild("Fist of Darkness") or P.Backpack:FindFirstChild("Fist of Darkness")
+        local Core = C:FindFirstChild("Core Brain") or P.Backpack:FindFirstChild("Core Brain")
 
-        -- Bước 11: Có Core Brain đi đổi tộc
-        if CoreBrain then
+        -- BƯỚC 11: Có Core Brain
+        if Core then
+            Fluent:Notify({Title = "XONG!", Content = "Đang đi đổi tộc Cyborg...", Duration = 5})
             local tw = TweenTo(Pos.CyborgNPC)
             if tw then tw.Completed:Wait() end
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("CyborgProvider", "Buy")
-            _G.AutoCyborg = false
-            break
+            _G.AutoCyborg = false break
         end
 
+        -- BƯỚC 0-5: Kiểm tra và lượm rương
         if not Fist then
-            -- Bước 0-5: Quét rương
-            local TargetChest = nil
-            for _, v in pairs(game.Workspace:GetChildren()) do
-                if v.Name:find("Chest") then TargetChest = v break end
-            end
-
-            if TargetChest then
-                -- Bay mượt lượm rương (Bước 3, 4)
-                local tw = TweenTo(TargetChest.CFrame * CFrame.new(0, 2, 0))
-                if tw then tw.Completed:Wait() end
-                task.wait(0.3)
+            local Chest = GetNearestChest()
+            if Chest then
+                TweenTo(Chest.CFrame)
             else
-                HopServer()
-                break
+                HopServer() break
             end
         else
-            -- Bước 6-10: Có Fist đi mua Chip và đánh Law
+            -- BƯỚC 6-10: Raid Law
+            Fluent:Notify({Title = "INFO", Content = "Đã có Fist! Đang đi Raid Law...", Duration = 3})
             local tw1 = TweenTo(Pos.Aris)
             if tw1 then tw1.Completed:Wait() end
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
             
+            task.wait(1)
             local tw2 = TweenTo(Pos.Button)
             if tw2 then tw2.Completed:Wait() end
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid") 
@@ -114,18 +127,15 @@ end
 
 -- [ GIAO DIỆN ]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Kaitun Cyborg",
+    Title = "Auto Kaitun Cyborg (FIXED)",
     Default = false,
     Callback = function(Value)
         _G.AutoCyborg = Value
         if Value then
-            spawn(MainLogic)
+            Fluent:Notify({Title = "MISS HUB", Content = "Bắt đầu quét rương...", Duration = 3})
+            task.spawn(MainLogic)
         else
-            -- Dừng bay ngay lập tức khi tắt
-            if _G.CurrentTween then
-                _G.CurrentTween:Cancel()
-                _G.CurrentTween = nil
-            end
+            if _G.CurrentTween then _G.CurrentTween:Cancel() end
         end
     end
 })
