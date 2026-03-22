@@ -1,9 +1,14 @@
-if not game:IsLoaded() then game.Loaded:Wait() end
+-- [ 1. LOAD SCREEN GUI / MISS HUB CỦA BẠN ]
+pcall(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
+end)
+
+-- [ 2. KHỞI TẠO THƯ VIỆN FLUENT ]
+repeat task.wait() until game:IsLoaded()
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
-local ScreenGui = loadstring(game:HttpGet("https://raw.githubusercontent.com/giabin987-ops/missem/refs/heads/main/MISS%20HUB"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - Bloxfruit 2026",
+    Title = "MISS HUB - Bloxfruit",
     SubTitle = "by Senpai",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -22,7 +27,7 @@ local _G = {
     CurrentTween = nil
 }
 
--- [ DANH SÁCH RƯƠNG ĐÃ LƯỢM - FIX LỖI QUAY LẠI RƯƠNG CŨ ]
+-- [ 3. HỆ THỐNG LỌC RƯƠNG (BLACKLIST) - FIX LỖI QUAY LẠI RƯƠNG CŨ ]
 local VisitedChests = {}
 
 local Pos = {
@@ -31,13 +36,11 @@ local Pos = {
     CyborgNPC = CFrame.new(-6371, 236, -4051),
 }
 
--- [ HÀM QUÉT RƯƠNG MỚI - CHỈ QUÉT RƯƠNG CHƯA LƯỢM ]
 function GetNewChest()
     local NearestChest = nil
     local MaxDist = math.huge
-    
     for _, v in pairs(game.Workspace:GetDescendants()) do
-        -- Kiểm tra tên rương và đảm bảo rương này chưa nằm trong danh sách đen
+        -- Kiểm tra rương và đảm bảo rương này chưa được lượm (không có trong VisitedChests)
         if (v.Name:find("Chest") or v.Name:find("Box")) and v:IsA("BasePart") and not VisitedChests[v] then
             local Dist = (v.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude
             if Dist < MaxDist then
@@ -53,15 +56,13 @@ function TweenTo(TargetCFrame)
     local Root = game.Players.LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not Root then return end
     if _G.CurrentTween then _G.CurrentTween:Cancel() end
-    
-    local Distance = (TargetCFrame.Position - Root.Position).Magnitude
-    _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new(Distance/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
+    _G.CurrentTween = game:GetService("TweenService"):Create(Root, TweenInfo.new((TargetCFrame.Position - Root.Position).Magnitude/_G.TweenSpeed, Enum.EasingStyle.Linear), {CFrame = TargetCFrame})
     _G.CurrentTween:Play()
     return _G.CurrentTween
 end
 
 function HopServer()
-    VisitedChests = {} -- Reset danh sách rương khi sang server mới
+    VisitedChests = {} -- Reset danh sách khi sang server mới
     local TPS = game:GetService("TeleportService")
     local Api = "https://games.roblox.com"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
     local s, r = pcall(function() return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api)) end)
@@ -75,7 +76,7 @@ function HopServer()
     end
 end
 
--- [ LOGIC CHÍNH ]
+-- [ 4. VÒNG LẶP CHÍNH AUTO CYBORG ]
 function MainLogic()
     while _G.AutoCyborg do
         task.wait(0.1)
@@ -86,7 +87,7 @@ function MainLogic()
         local Fist = C:FindFirstChild("Fist of Darkness") or P.Backpack:FindFirstChild("Fist of Darkness")
         local Core = C:FindFirstChild("Core Brain") or P.Backpack:FindFirstChild("Core Brain")
 
-        -- Bước 11: Core Brain
+        -- Bước 11: Đã có Core Brain -> Đi mua tộc
         if Core then
             local tw = TweenTo(Pos.CyborgNPC)
             if tw then tw.Completed:Wait() end
@@ -94,26 +95,27 @@ function MainLogic()
             _G.AutoCyborg = false break
         end
 
-        -- Bước 2-5: Lượm rương
         if not Fist then
+            -- Bước 1-5: Lượm rương mới (Không quay lại rương cũ)
             local Chest = GetNewChest()
             if Chest then
                 local tw = TweenTo(Chest.CFrame)
                 if tw then 
                     tw.Completed:Wait() 
-                    task.wait(0.5) -- Đợi 0.5s để nhận tiền và chắc chắn rương biến mất
-                    VisitedChests[Chest] = true -- ĐƯA VÀO DANH SÁCH ĐEN (Quan trọng nhất)
+                    task.wait(0.5) -- Đợi server nhận tiền
+                    VisitedChests[Chest] = true -- GHI CHÚ ĐÃ LƯỢM (Quan trọng)
                 end
             else
+                -- Bước 0: Hết rương thì đổi Server
                 HopServer() break
             end
         else
-            -- Bước 6-10: Raid Law (Giữ nguyên)
+            -- Bước 6-10: Raid Law
             local tw1 = TweenTo(Pos.Aris)
             if tw1 then tw1.Completed:Wait() end
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
             
-            task.wait(1)
+            task.wait(0.5)
             local tw2 = TweenTo(Pos.Button)
             if tw2 then tw2.Completed:Wait() end
             game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid") 
@@ -127,16 +129,16 @@ function MainLogic()
     end
 end
 
--- [ UI ]
+-- [ 5. GIAO DIỆN ]
 Tabs.Main:AddToggle("AutoCyborg", {
-    Title = "Auto Kaitun Cyborg (FIXED REUSE CHEST)",
+    Title = "Auto Kaitun Cyborg",
     Default = false,
     Callback = function(Value)
         _G.AutoCyborg = Value
-        if Value then
-            task.spawn(MainLogic)
-        else
-            if _G.CurrentTween then _G.CurrentTween:Cancel() end
+        if Value then 
+            task.spawn(MainLogic) 
+        else 
+            if _G.CurrentTween then _G.CurrentTween:Cancel() end 
         end
     end
 })
