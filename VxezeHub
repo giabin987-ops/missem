@@ -2,7 +2,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 
 local Window = Fluent:CreateWindow({
     Title = "Vxeze Hub",
-    SubTitle = "By Senpai | ZOO or OOF",
+    SubTitle = "By Senpai | ZOO or OOF FULL OPTION",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -30,7 +30,7 @@ Tabs.Main:AddSection("Chức năng Auto")
 
 Tabs.Main:AddToggle("AutoWinToggle", {
     Title = "Auto Win (Động vật)",
-    Description = "Tự động chui xuống đất (chỉ đủ ẩn đầu)",
+    Description = "Chui xuống đất (chỉ ẩn đầu - ĐÃ FIX bung lên sảnh)",
     Default = false,
     Callback = function(v) AutoWin_Animal = v end
 })
@@ -63,7 +63,7 @@ Tabs.Main:AddToggle("NoclipToggle", {
 })
 
 ----------------------------------------------------------------
--- [ TAB ESP ] - Giữ nguyên như cũ
+-- [ TAB ESP ] - GIỮ NGUYÊN
 ----------------------------------------------------------------
 Tabs.ESP:AddSection("Đối tượng hiển thị")
 
@@ -101,62 +101,59 @@ game:GetService("Players").LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- ==================== AUTO WIN ĐÃ CẢI TIẾN (CHỈ ẨN ĐẦU) ====================
+-- ==================== AUTO WIN - ĐÃ FIX BUNG LÊN SẢNH ====================
 local autoWinConnection = nil
-local currentDepth = -7
+local targetY = nil
 
--- Bảng độ sâu phù hợp cho từng loại động vật (chỉ đủ không lộ đầu)
+-- Độ sâu cực kỳ nhẹ (chỉ đủ ẩn đầu, không sâu quá)
 local AnimalDepths = {
-    ["mouse"] = -4, ["rat"] = -4, ["chicken"] = -5, ["rabbit"] = -5,
-    ["snake"] = -6, ["lizard"] = -5, ["cat"] = -6, ["dog"] = -7,
-    ["fox"] = -7, ["pig"] = -7, ["deer"] = -8, ["wolf"] = -8,
-    ["bear"] = -9, ["lion"] = -9, ["tiger"] = -9, ["gorilla"] = -10,
-    ["elephant"] = -12, ["giraffe"] = -11,
-    default = -7
+    ["mouse"] = -4, ["rat"] = -4, ["chicken"] = -4, ["rabbit"] = -4,
+    ["snake"] = -4.5, ["lizard"] = -4.5, ["cat"] = -5, ["dog"] = -5,
+    ["fox"] = -5.5, ["pig"] = -5.5, ["deer"] = -6, ["wolf"] = -6,
+    ["bear"] = -7, ["lion"] = -7, ["tiger"] = -7, ["gorilla"] = -7.5,
+    ["elephant"] = -8.5, ["giraffe"] = -8,
+    default = -5.5
 }
 
 local function GetAnimalDepth()
     local char = game.Players.LocalPlayer.Character
     if not char then return AnimalDepths.default end
-    
     local name = (char.Name .. " " .. game.Players.LocalPlayer.DisplayName):lower()
-    
     for animal, depth in pairs(AnimalDepths) do
-        if name:find(animal) then
-            return depth
-        end
+        if name:find(animal) then return depth end
     end
     return AnimalDepths.default
 end
 
 local function StartAutoWin()
     if autoWinConnection then return end
-    
-    currentDepth = GetAnimalDepth()
-    
+    targetY = nil
+
     autoWinConnection = game:GetService("RunService").Stepped:Connect(function()
         local char = game.Players.LocalPlayer.Character
         if not char then return end
-        
         local hrp = char:FindFirstChild("HumanoidRootPart")
-        local hum = char:FindFirstChild("Humanoid")
-        if not hrp or not hum then return end
+        if not hrp then return end
 
         if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
-            hum.PlatformStand = true
-            
-            -- Di chuyển xuống rất nhẹ nhàng để tránh văng
-            local targetY = hrp.Position.Y - 0.6
-            local finalY = math.max(targetY, hrp.Position.Y + currentDepth)
-            
-            hrp.CFrame = CFrame.new(hrp.Position.X, finalY, hrp.Position.Z)
-            
-            -- Giữ im và chống văng lên
+            -- Xác định độ sâu lần đầu tiên
+            if not targetY then
+                targetY = hrp.Position.Y + GetAnimalDepth()
+            end
+
+            -- CHỈ DI CHUYỂN XUỐNG RẤT CHẬM (0.15 mỗi frame) → tránh bung sảnh
+            if hrp.Position.Y > targetY then
+                local newY = hrp.Position.Y - 0.15
+                hrp.CFrame = CFrame.new(hrp.Position.X, newY, hrp.Position.Z)
+            end
+
+            -- Giữ im cực mạnh + lực xuống siêu nhẹ để chống văng lên
             hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, -2.5, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -0.8, 0)
             hrp.AssemblyRootPart = hrp
+
         else
-            hum.PlatformStand = false
+            targetY = nil
         end
     end)
 end
@@ -166,8 +163,7 @@ local function StopAutoWin()
         autoWinConnection:Disconnect()
         autoWinConnection = nil
     end
-    local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
-    if hum then hum.PlatformStand = false end
+    targetY = nil
 end
 
 -- Theo dõi Auto Win
@@ -189,7 +185,7 @@ game:GetService("RunService").Stepped:Connect(function()
 
     hum.WalkSpeed = WalkSpeed_Val
 
-    -- Noclip khi bật hoặc đang Auto Win
+    -- Noclip khi Auto Win hoặc bật tay
     if Noclip or (AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal") then
         for _, part in pairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -248,6 +244,6 @@ game.Players.PlayerAdded:Connect(CreateESP)
 Window:SelectTab(1)
 Fluent:Notify({ 
     Title = "Vxeze Hub", 
-    Content = "Zoo of oof games! ", 
-    Duration = 7 
+    Content = "✅ Auto Win ĐÃ FIX BUNG LÊN SẢNH!\nChỉ chui đủ ẩn đầu + di chuyển siêu chậm", 
+    Duration = 8 
 })
