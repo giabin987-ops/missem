@@ -2,7 +2,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 
 local Window = Fluent:CreateWindow({
     Title = "Vxeze Hub",
-    SubTitle = "By Senpai | ZOO or OOF FULL OPTION",
+    SubTitle = "By Senpai | ZOO or OOF",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
     Acrylic = true,
@@ -30,7 +30,7 @@ Tabs.Main:AddSection("Chức năng Auto")
 
 Tabs.Main:AddToggle("AutoWinToggle", {
     Title = "Auto Win (Động vật)",
-    Description = "Bay xuống đất vừa đủ (không lộ đầu)",
+    Description = "Tự động chui xuống đất (chỉ đủ ẩn đầu)",
     Default = false,
     Callback = function(v) AutoWin_Animal = v end
 })
@@ -101,27 +101,60 @@ game:GetService("Players").LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Auto Win Logic (Fix dật + chỉ xuống vừa đủ)
+-- ==================== AUTO WIN ĐÃ CẢI TIẾN (CHỈ ẨN ĐẦU) ====================
 local autoWinConnection = nil
+local currentDepth = -7
+
+-- Bảng độ sâu phù hợp cho từng loại động vật (chỉ đủ không lộ đầu)
+local AnimalDepths = {
+    ["mouse"] = -4, ["rat"] = -4, ["chicken"] = -5, ["rabbit"] = -5,
+    ["snake"] = -6, ["lizard"] = -5, ["cat"] = -6, ["dog"] = -7,
+    ["fox"] = -7, ["pig"] = -7, ["deer"] = -8, ["wolf"] = -8,
+    ["bear"] = -9, ["lion"] = -9, ["tiger"] = -9, ["gorilla"] = -10,
+    ["elephant"] = -12, ["giraffe"] = -11,
+    default = -7
+}
+
+local function GetAnimalDepth()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return AnimalDepths.default end
+    
+    local name = (char.Name .. " " .. game.Players.LocalPlayer.DisplayName):lower()
+    
+    for animal, depth in pairs(AnimalDepths) do
+        if name:find(animal) then
+            return depth
+        end
+    end
+    return AnimalDepths.default
+end
 
 local function StartAutoWin()
     if autoWinConnection then return end
     
+    currentDepth = GetAnimalDepth()
+    
     autoWinConnection = game:GetService("RunService").Stepped:Connect(function()
         local char = game.Players.LocalPlayer.Character
         if not char then return end
+        
         local hrp = char:FindFirstChild("HumanoidRootPart")
         local hum = char:FindFirstChild("Humanoid")
         if not hrp or not hum then return end
 
         if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
-            -- Bay xuống vừa đủ (chỉ ẩn phần đầu)
-            hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 0.5, hrp.Position.Z) -- di chuyển từ từ xuống
             hum.PlatformStand = true
             
-            -- Giữ velocity = 0 để không rơi thêm
+            -- Di chuyển xuống rất nhẹ nhàng để tránh văng
+            local targetY = hrp.Position.Y - 0.6
+            local finalY = math.max(targetY, hrp.Position.Y + currentDepth)
+            
+            hrp.CFrame = CFrame.new(hrp.Position.X, finalY, hrp.Position.Z)
+            
+            -- Giữ im và chống văng lên
             hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, -2.5, 0)
+            hrp.AssemblyRootPart = hrp
         else
             hum.PlatformStand = false
         end
@@ -137,20 +170,16 @@ local function StopAutoWin()
     if hum then hum.PlatformStand = false end
 end
 
--- Theo dõi toggle AutoWin
+-- Theo dõi Auto Win
 game:GetService("RunService").Heartbeat:Connect(function()
     if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
-        if not autoWinConnection then
-            StartAutoWin()
-        end
+        if not autoWinConnection then StartAutoWin() end
     else
-        if autoWinConnection then
-            StopAutoWin()
-        end
+        if autoWinConnection then StopAutoWin() end
     end
 end)
 
--- Noclip + Speed + InfJump (giữ nguyên logic cũ)
+-- ==================== SPEED + NOCLIP + INF JUMP ====================
 game:GetService("RunService").Stepped:Connect(function()
     local char = game.Players.LocalPlayer.Character
     if not char then return end
@@ -160,6 +189,7 @@ game:GetService("RunService").Stepped:Connect(function()
 
     hum.WalkSpeed = WalkSpeed_Val
 
+    -- Noclip khi bật hoặc đang Auto Win
     if Noclip or (AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal") then
         for _, part in pairs(char:GetDescendants()) do
             if part:IsA("BasePart") then
@@ -192,8 +222,13 @@ local function CreateESP(p)
 
             if onScreen and active then
                 local dist = math.floor((game.Players.LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
-                tracer.Visible, tracer.From, tracer.To, tracer.Color = true, Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X/2, game.Workspace.CurrentCamera.ViewportSize.Y), Vector2.new(vec.X, vec.Y), color
-                label.Visible, label.Position, label.Text, label.Color = true, Vector2.new(vec.X, vec.Y - 40), string.format("%s [%dm]", p.Name, dist), color
+                tracer.Visible, tracer.From, tracer.To, tracer.Color = true, 
+                    Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X/2, game.Workspace.CurrentCamera.ViewportSize.Y), 
+                    Vector2.new(vec.X, vec.Y), color
+                
+                label.Visible, label.Position, label.Text, label.Color = true, 
+                    Vector2.new(vec.X, vec.Y - 40), 
+                    string.format("%s [%dm]", p.Name, dist), color
                 label.Size, label.Center, label.Outline = 14, true, true
             else
                 tracer.Visible, label.Visible = false, false
@@ -209,10 +244,10 @@ for _, p in ipairs(game.Players:GetPlayers()) do
 end
 game.Players.PlayerAdded:Connect(CreateESP)
 
--- ==================== KẾT THÚC ====================
+-- ==================== HOÀN TẤT ====================
 Window:SelectTab(1)
 Fluent:Notify({ 
     Title = "Vxeze Hub", 
-    Content = "Thành Công Game Zoo of oof! ", 
-    Duration = 6 
+    Content = "Zoo of oof games! ", 
+    Duration = 7 
 })
