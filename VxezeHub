@@ -30,14 +30,14 @@ Tabs.Main:AddSection("Chức năng Auto")
 
 Tabs.Main:AddToggle("AutoWinToggle", {
     Title = "Auto Win (Động vật)",
-    Description = "Tự động trốn dưới lòng đất khi là Animal",
+    Description = "Bay xuống đất vừa đủ (không lộ đầu)",
     Default = false,
     Callback = function(v) AutoWin_Animal = v end
 })
 
 Tabs.Main:AddToggle("AntiAFKToggle", {
     Title = "Anti-AFK",
-    Description = "Ngăn bị kick khi đứng yên (rất hiệu quả)",
+    Description = "Ngăn bị kick khi đứng yên",
     Default = false,
     Callback = function(v) AntiAFK = v end
 })
@@ -101,31 +101,69 @@ game:GetService("Players").LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- Vòng lặp Main (Speed, Noclip, AutoWin) - Đã sửa AutoWin
-game:GetService("RunService").Stepped:Connect(function()
-    local char = game.Players.LocalPlayer.Character
-    local hrp = char and char:FindFirstChild("HumanoidRootPart")
-    local hum = char and char:FindFirstChild("Humanoid")
-    
-    if char and hrp and hum then
-        -- Speed
-        hum.WalkSpeed = WalkSpeed_Val
+-- Auto Win Logic (Fix dật + chỉ xuống vừa đủ)
+local autoWinConnection = nil
 
-        -- Auto Win (sửa lại cho mượt và ít lag hơn)
+local function StartAutoWin()
+    if autoWinConnection then return end
+    
+    autoWinConnection = game:GetService("RunService").Stepped:Connect(function()
+        local char = game.Players.LocalPlayer.Character
+        if not char then return end
+        local hrp = char:FindFirstChild("HumanoidRootPart")
+        local hum = char:FindFirstChild("Humanoid")
+        if not hrp or not hum then return end
+
         if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
-            hrp.CFrame = CFrame.new(hrp.Position.X, -45, hrp.Position.Z)  -- -45 sâu vừa đủ
-            hrp.Velocity = Vector3.new(0, 0, 0)
+            -- Bay xuống vừa đủ (chỉ ẩn phần đầu)
+            hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y - 0.5, hrp.Position.Z) -- di chuyển từ từ xuống
             hum.PlatformStand = true
+            
+            -- Giữ velocity = 0 để không rơi thêm
+            hrp.Velocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         else
             hum.PlatformStand = false
         end
+    end)
+end
 
-        -- Noclip
-        if Noclip or (AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal") then
-            for _, p in pairs(char:GetDescendants()) do
-                if p:IsA("BasePart") then 
-                    p.CanCollide = false 
-                end
+local function StopAutoWin()
+    if autoWinConnection then
+        autoWinConnection:Disconnect()
+        autoWinConnection = nil
+    end
+    local hum = game.Players.LocalPlayer.Character and game.Players.LocalPlayer.Character:FindFirstChild("Humanoid")
+    if hum then hum.PlatformStand = false end
+end
+
+-- Theo dõi toggle AutoWin
+game:GetService("RunService").Heartbeat:Connect(function()
+    if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
+        if not autoWinConnection then
+            StartAutoWin()
+        end
+    else
+        if autoWinConnection then
+            StopAutoWin()
+        end
+    end
+end)
+
+-- Noclip + Speed + InfJump (giữ nguyên logic cũ)
+game:GetService("RunService").Stepped:Connect(function()
+    local char = game.Players.LocalPlayer.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChild("Humanoid")
+    if not hrp or not hum then return end
+
+    hum.WalkSpeed = WalkSpeed_Val
+
+    if Noclip or (AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal") then
+        for _, part in pairs(char:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
             end
         end
     end
@@ -133,11 +171,9 @@ end)
 
 -- Nhảy vô hạn
 game:GetService("UserInputService").JumpRequest:Connect(function()
-    if InfJump then 
+    if InfJump then
         local hum = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then 
-            hum:ChangeState("Jumping") 
-        end 
+        if hum then hum:ChangeState("Jumping") end
     end
 end)
 
@@ -168,11 +204,8 @@ local function CreateESP(p)
     end)
 end
 
--- Kích hoạt ESP
 for _, p in ipairs(game.Players:GetPlayers()) do 
-    if p ~= game.Players.LocalPlayer then 
-        CreateESP(p) 
-    end 
+    if p ~= game.Players.LocalPlayer then CreateESP(p) end 
 end
 game.Players.PlayerAdded:Connect(CreateESP)
 
@@ -180,6 +213,6 @@ game.Players.PlayerAdded:Connect(CreateESP)
 Window:SelectTab(1)
 Fluent:Notify({ 
     Title = "Vxeze Hub", 
-    Content = "Đã sửa Auto Win + Thêm Anti-AFK thành công!\nESP giữ nguyên như cũ.", 
+    Content = "Thành Công Game Zoo of oof! ", 
     Duration = 6 
 })
