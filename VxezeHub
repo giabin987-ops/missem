@@ -30,7 +30,7 @@ Tabs.Main:AddSection("Chức năng Auto")
 
 Tabs.Main:AddToggle("AutoWinToggle", {
     Title = "Auto Win (Động vật)",
-    Description = "Chạm đúng mặt đất (đầu vừa chui dưới - ĐÃ FIX bung + kẹt + chạm bên kia)",
+    Description = "Bay lên trời cao (không bị bắn - bay vừa phải)",
     Default = false,
     Callback = function(v) AutoWin_Animal = v end
 })
@@ -101,33 +101,13 @@ game:GetService("Players").LocalPlayer.Idled:Connect(function()
     end
 end)
 
--- ==================== AUTO WIN - ĐÃ FIX HOÀN TOÀN ====================
+-- ==================== AUTO WIN MỚI: BAY LÊN TRỜI ====================
 local autoWinConnection = nil
-local targetY = nil
-
--- Bảng độ sâu SIÊU NHẸ (đầu chỉ vừa chạm mặt dưới đất, KHÔNG CHẠM BÊN KIA)
-local AnimalDepths = {
-    ["mouse"] = -3.2, ["rat"] = -3.2, ["chicken"] = -3.3, ["rabbit"] = -3.3,
-    ["snake"] = -3.5, ["lizard"] = -3.5, ["cat"] = -3.8, ["dog"] = -4,
-    ["fox"] = -4.1, ["pig"] = -4.1, ["deer"] = -4.5, ["wolf"] = -4.5,
-    ["bear"] = -5, ["lion"] = -5, ["tiger"] = -5, ["gorilla"] = -5.2,
-    ["elephant"] = -6, ["giraffe"] = -5.8,
-    default = -4
-}
-
-local function GetAnimalDepth()
-    local char = game.Players.LocalPlayer.Character
-    if not char then return AnimalDepths.default end
-    local name = (char.Name .. " " .. game.Players.LocalPlayer.DisplayName):lower()
-    for animal, depth in pairs(AnimalDepths) do
-        if name:find(animal) then return depth end
-    end
-    return AnimalDepths.default
-end
+local skyTargetY = nil
 
 local function StartAutoWin()
     if autoWinConnection then return end
-    targetY = nil
+    skyTargetY = nil
 
     autoWinConnection = game:GetService("RunService").Stepped:Connect(function()
         local char = game.Players.LocalPlayer.Character
@@ -136,28 +116,27 @@ local function StartAutoWin()
         if not hrp then return end
 
         if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
-            -- Xác định target Y lần đầu (đầu vừa chạm mặt dưới đất)
-            if not targetY then
-                targetY = hrp.Position.Y + GetAnimalDepth()
+            -- Xác định độ cao bay vừa phải lần đầu tiên
+            if not skyTargetY then
+                skyTargetY = hrp.Position.Y + 420   -- bay vừa phải (có thể chỉnh số này)
             end
 
-            -- DI CHUYỂN RẤT CHẬM để KHÔNG BAY và KHÔNG CHẠM BÊN KIA
-            if hrp.Position.Y > targetY then
-                local newY = hrp.Position.Y - 0.05   -- cực chậm
+            -- Bay lên trời
+            if hrp.Position.Y < skyTargetY then
+                local newY = hrp.Position.Y + 1.8   -- tốc độ bay vừa phải, mượt
                 hrp.CFrame = CFrame.new(hrp.Position.X, newY, hrp.Position.Z)
             else
-                -- ĐÃ CHẠM ĐÚNG MẶT DƯỚI → giữ cứng vị trí, không cho bay lên hay kẹt
-                hrp.CFrame = CFrame.new(hrp.Position.X, targetY, hrp.Position.Z)
+                -- Đã lên cao → giữ nguyên vị trí trên trời
+                hrp.CFrame = CFrame.new(hrp.Position.X, skyTargetY, hrp.Position.Z)
             end
 
-            -- Giữ im hoàn toàn (fix lỗi không làm gì hết + không bay bật lên)
+            -- Giữ im trên trời, không rơi xuống (fix bị bắn)
             hrp.Velocity = Vector3.new(0, 0, 0)
-            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)   -- tắt lực xuống khi đã chạm
-            hrp.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+            hrp.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
             hrp.AssemblyRootPart = hrp
 
         else
-            targetY = nil
+            skyTargetY = nil
         end
     end)
 end
@@ -167,10 +146,10 @@ local function StopAutoWin()
         autoWinConnection:Disconnect()
         autoWinConnection = nil
     end
-    targetY = nil
+    skyTargetY = nil
 end
 
--- Theo dõi toggle
+-- Theo dõi toggle Auto Win
 game:GetService("RunService").Heartbeat:Connect(function()
     if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
         if not autoWinConnection then StartAutoWin() end
@@ -247,6 +226,6 @@ game.Players.PlayerAdded:Connect(CreateESP)
 Window:SelectTab(1)
 Fluent:Notify({ 
     Title = "Vxeze Hub", 
-    Content = "✅  Win ĐÃ FIX HOÀN TOÀN!\nĐầu chỉ chạm đúng mặt dưới đất\nKhông bay bật lên - Không kẹt - Không chạm bên kia", 
+    Content = "✅ ĐÃ THAY AUTO WIN MỚI!\nBay lên trời cao - Không bị bắn - Bay vừa phải", 
     Duration = 8 
 })
