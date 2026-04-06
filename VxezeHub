@@ -2,7 +2,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 
 local Window = Fluent:CreateWindow({
     Title = "Vxeze Hub",
-    SubTitle = "By Senpai | ZOO or OOF FULL OPTION",
+    SubTitle = "By Senpai | ZOO or OOF",
     TabWidth = 160,
     Size = UDim2.fromOffset(560, 440),
     Acrylic = true,
@@ -293,6 +293,6 @@ game.Players.PlayerAdded:Connect(CreateESP)
 Window:SelectTab(1)
 Fluent:Notify({ 
     Title = "Vxeze Hub", 
-    Content = "✅ Auto Win Người bắn ĐÃ THAY ĐỔI!\nTele dính vào người + Aim + Bắn liên tục + Auto chuyển target", 
+    Content = "Vxezestudio ran successfully!", 
     Duration = 8 
 })
