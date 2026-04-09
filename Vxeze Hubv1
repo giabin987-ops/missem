@@ -10,30 +10,89 @@ local Window = Fluent:CreateWindow({
     MinimizeKey = Enum.KeyCode.RightControl
 })
 
--- ==================== TAB ĐẦU TIÊN: EVENT EGG ====================
+-- ==================== TAB EVENT EGG ====================
 local EventEggTab = Window:AddTab({ Title = "Event Egg", Icon = "egg" })
 
+-- Trạng Thái Hiện Tại
 EventEggTab:AddParagraph({
-    Title = "Event Egg",
-    Content = "Chào mừng đến với Vxeze Hub - Blox Fruits\nTab Event Egg đang được xây dựng..."
+    Title = "Trạng Thái Hiện Tại",
+    Content = "Event Egg: Đang kiểm tra...\nESP Trứng sẵn sàng hoạt động"
 })
 
-EventEggTab:AddButton({
-    Title = "Test Button (Event Egg)",
-    Description = "Nhấn để kiểm tra tab có hoạt động không",
-    Callback = function()
-        Fluent:Notify({
-            Title = "Vxeze Hub",
-            Content = "Event Egg tab đang hoạt động tốt!",
-            Duration = 3
-        })
+-- ESP Trứng (chức năng thật)
+local ESP_Enabled = false
+local espConnection = nil
+
+local function createEggESP(egg)
+    if egg:FindFirstChild("EggESP") then return end
+    
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "EggESP"
+    billboard.Adornee = egg:FindFirstChildWhichIsA("BasePart") or egg
+    billboard.AlwaysOnTop = true
+    billboard.Size = UDim2.new(0, 180, 0, 60)
+    billboard.StudsOffset = Vector3.new(0, 4, 0)
+    billboard.Parent = egg
+
+    local textLabel = Instance.new("TextLabel")
+    textLabel.Size = UDim2.new(1, 0, 1, 0)
+    textLabel.BackgroundTransparency = 1
+    textLabel.Text = "🪺 " .. egg.Name
+    textLabel.TextColor3 = Color3.fromRGB(255, 85, 255)
+    textLabel.TextScaled = true
+    textLabel.Font = Enum.Font.GothamBold
+    textLabel.TextStrokeTransparency = 0
+    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+    textLabel.Parent = billboard
+end
+
+local function removeAllEggESP()
+    for _, obj in ipairs(workspace:GetDescendants()) do
+        if obj:FindFirstChild("EggESP") then
+            obj.EggESP:Destroy()
+        end
+    end
+end
+
+local function startESP()
+    if espConnection then return end
+    espConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        if not ESP_Enabled then
+            espConnection:Disconnect()
+            espConnection = nil
+            return
+        end
+        for _, v in ipairs(workspace:GetDescendants()) do
+            if v.Name:lower():find("egg") and (v:IsA("Model") or v:IsA("Part")) then
+                createEggESP(v)
+            end
+        end
+    end)
+end
+
+EventEggTab:AddToggle({
+    Title = "ESP Trứng",
+    Description = "Bật ESP hiển thị tất cả trứng event qua tường",
+    Default = false,
+    Callback = function(Value)
+        ESP_Enabled = Value
+        if Value then
+            startESP()
+            Fluent:Notify({
+                Title = "Vxeze Hub",
+                Content = "ESP Trứng đã BẬT! 🪺\nĐang quét trứng trong map...",
+                Duration = 4
+            })
+        else
+            removeAllEggESP()
+            Fluent:Notify({
+                Title = "Vxeze Hub",
+                Content = "ESP Trứng đã TẮT!",
+                Duration = 3
+            })
+        end
     end
 })
-
--- ==================== CÁC TAB KHÁC (sẽ thêm sau) ====================
-local MainTab = Window:AddTab({ Title = "Main", Icon = "home" })
-local FarmTab = Window:AddTab({ Title = "Auto Farm", Icon = "zap" })
-local SettingsTab = Window:AddTab({ Title = "Settings", Icon = "settings" })
 
 Fluent:Notify({
     Title = "Vxeze Hub",
