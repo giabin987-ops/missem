@@ -1,4 +1,4 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Fluent = loadstring(game:HttpGet("https://github.com"))()
 
 local Window = Fluent:CreateWindow({
     Title = "Vxeze Hub",
@@ -12,100 +12,92 @@ local Window = Fluent:CreateWindow({
 
 -- ==================== TAB EVENT EGG ====================
 local EventEggTab = Window:AddTab({ Title = "Event Egg", Icon = "egg" })
-
--- Trạng Thái Hiện Tại
-EventEggTab:AddParagraph({
-    Title = "Trạng Thái Hiện Tại",
-    Content = "Event Egg: Đang kiểm tra...\nESP Trứng sẵn sàng hoạt động"
-})
-
--- ESP Trứng (chức năng thật)
 local ESP_Enabled = false
-local espConnection = nil
 
-local function createEggESP(egg)
-    if egg:FindFirstChild("EggESP") then return end
+-- Hàm tạo ESP (Đã thêm kiểm tra lỗi)
+local function createEggESP(obj)
+    if obj:FindFirstChild("EggESP") then return end
     
+    local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
+    if not targetPart then return end
+
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "EggESP"
-    billboard.Adornee = egg:FindFirstChildWhichIsA("BasePart") or egg
+    billboard.Adornee = targetPart
     billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.new(0, 180, 0, 60)
-    billboard.StudsOffset = Vector3.new(0, 4, 0)
-    billboard.Parent = egg
+    billboard.Size = UDim2.new(0, 100, 0, 30)
+    billboard.StudsOffset = Vector3.new(0, 3, 0)
+    billboard.Parent = obj
 
     local textLabel = Instance.new("TextLabel")
     textLabel.Size = UDim2.new(1, 0, 1, 0)
     textLabel.BackgroundTransparency = 1
-    textLabel.Text = "🪺 " .. egg.Name
-    textLabel.TextColor3 = Color3.fromRGB(255, 85, 255)
+    textLabel.Text = "🥚 " .. obj.Name
+    textLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
     textLabel.TextScaled = true
     textLabel.Font = Enum.Font.GothamBold
     textLabel.TextStrokeTransparency = 0
-    textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
     textLabel.Parent = billboard
 end
 
-local function removeAllEggESP()
-    for _, obj in ipairs(workspace:GetDescendants()) do
-        if obj:FindFirstChild("EggESP") then
-            obj.EggESP:Destroy()
-        end
-    end
-end
-
-local function startESP()
-    if espConnection then return end
-    espConnection = game:GetService("RunService").Heartbeat:Connect(function()
-        if not ESP_Enabled then
-            espConnection:Disconnect()
-            espConnection = nil
-            return
-        end
-        for _, v in ipairs(workspace:GetDescendants()) do
-            if v.Name:lower():find("egg") and (v:IsA("Model") or v:IsA("Part")) then
-                createEggESP(v)
-            end
-        end
-    end)
-end
-
-local Toggle = EventEggTab:AddToggle("EggESPToggle", {
-    Title = "Bật ESP Trứng", 
+-- ==================== TOGGLE VỚI NOTIFY ====================
+local EggToggle = EventEggTab:AddToggle("EggESPToggle", {
+    Title = "ESP Trứng Event", 
     Default = false,
-    Description = "Hiển thị trứng qua tường"
+    Description = "Hiển thị vị trí trứng qua tường"
 })
 
-Toggle:OnChanged(function(Value)
+EggToggle:OnChanged(function(Value)
     ESP_Enabled = Value
+    
     if Value then
-        Fluent:Notify({Title = "Vxeze Hub", Content = "ESP ON", Duration = 2})
-        -- Chạy vòng lặp quét trứng
+        -- Thông báo khi BẬT
+        Fluent:Notify({
+            Title = "Vxeze Hub",
+            Content = "Đã BẬT ESP Trứng! Đang quét bản đồ...",
+            SubTitle = "Hệ thống ESP",
+            Duration = 3
+        })
+        
+        -- Chạy vòng lặp quét trứng liên tục khi đang bật
         task.spawn(function()
             while ESP_Enabled do
-                for _, v in ipairs(workspace:GetDescendants()) do
-                    if not ESP_Enabled then break end
-                    if v.Name:lower():find("egg") and (v:IsA("Model") or v:IsA("Part")) then
-                        createEggESP(v)
+                pcall(function()
+                    for _, v in ipairs(workspace:GetDescendants()) do
+                        if not ESP_Enabled then break end
+                        -- Kiểm tra tên (egg, event, hoặc tên quả trứng cụ thể của game)
+                        if (v.Name:lower():find("egg") or v.Name:lower():find("event")) and (v:IsA("Model") or v:IsA("BasePart")) then
+                            createEggESP(v)
+                        end
                     end
-                end
-                task.wait(2)
+                end)
+                task.wait(2) -- Quét lại sau mỗi 2 giây để cập nhật trứng mới spawn
             end
         end)
     else
-        -- Xóa ESP
+        -- Thông báo khi TẮT
+        Fluent:Notify({
+            Title = "Vxeze Hub",
+            Content = "Đã TẮT ESP Trứng.",
+            SubTitle = "Hệ thống ESP",
+            Duration = 3
+        })
+        
+        -- Xóa tất cả ESP đang hiện
         for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "EggESP" then obj:Destroy() end
+            if obj.Name == "EggESP" then
+                obj:Destroy()
+            end
         end
-        Fluent:Notify({Title = "Vxeze Hub", Content = "ESP OFF", Duration = 2})
     end
 end)
 
--- Chọn tab mặc định để khi mở lên là thấy ngay
+-- Tự động chọn Tab đầu tiên khi load
 Window:SelectTab(1)
 
+-- Notify khi script load thành công
 Fluent:Notify({
     Title = "Vxeze Hub",
-    Content = "Đã load thành công!",
+    Content = "Script đã load thành công bởi Senpai!",
     Duration = 5
 })
