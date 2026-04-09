@@ -70,32 +70,42 @@ local function startESP()
     end)
 end
 
-EventEggTab:AddToggle({
-    Title = "ESP Trứng",
-    Description = "Bật ESP hiển thị tất cả trứng event qua tường",
+local Toggle = EventEggTab:AddToggle("EggESPToggle", {
+    Title = "Bật ESP Trứng", 
     Default = false,
-    Callback = function(Value)
-        ESP_Enabled = Value
-        if Value then
-            startESP()
-            Fluent:Notify({
-                Title = "Vxeze Hub",
-                Content = "ESP Trứng đã BẬT! 🪺\nĐang quét trứng trong map...",
-                Duration = 4
-            })
-        else
-            removeAllEggESP()
-            Fluent:Notify({
-                Title = "Vxeze Hub",
-                Content = "ESP Trứng đã TẮT!",
-                Duration = 3
-            })
-        end
-    end
+    Description = "Hiển thị trứng qua tường"
 })
+
+Toggle:OnChanged(function(Value)
+    ESP_Enabled = Value
+    if Value then
+        Fluent:Notify({Title = "Vxeze Hub", Content = "ESP ON", Duration = 2})
+        -- Chạy vòng lặp quét trứng
+        task.spawn(function()
+            while ESP_Enabled do
+                for _, v in ipairs(workspace:GetDescendants()) do
+                    if not ESP_Enabled then break end
+                    if v.Name:lower():find("egg") and (v:IsA("Model") or v:IsA("Part")) then
+                        createEggESP(v)
+                    end
+                end
+                task.wait(2)
+            end
+        end)
+    else
+        -- Xóa ESP
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj.Name == "EggESP" then obj:Destroy() end
+        end
+        Fluent:Notify({Title = "Vxeze Hub", Content = "ESP OFF", Duration = 2})
+    end
+end)
+
+-- Chọn tab mặc định để khi mở lên là thấy ngay
+Window:SelectTab(1)
 
 Fluent:Notify({
     Title = "Vxeze Hub",
-    Content = "Đã load thành công!\nby Senpai",
+    Content = "Đã load thành công!",
     Duration = 5
 })
