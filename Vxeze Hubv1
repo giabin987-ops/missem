@@ -1,4 +1,5 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Vim = game:GetService("VirtualInputManager")
 
 local Window = Fluent:CreateWindow({
     Title = "W-Azure | Sailor Piece",
@@ -7,19 +8,12 @@ local Window = Fluent:CreateWindow({
     Size = UDim2.fromOffset(580,460)
 })
 
--- TABS
 local SettingFarm = Window:AddTab({Title="Setting Farm"})
 local Farming = Window:AddTab({Title="Farming"})
 
--- VARIABLES (Lưu trữ lựa chọn)
+-- Biến lưu trữ
 local SelectedWeapon = "Melee"
 local SelectedSkills = {}
-
--- SETTING FARM TAB
-SettingFarm:AddParagraph({
-    Title = "Configuration",
-    Content = "Thiết lập vũ khí và kỹ năng bổ trợ."
-})
 
 -- 1. Select Weapon
 local WeaponDropdown = SettingFarm:AddDropdown("WeaponSelect", {
@@ -28,37 +22,35 @@ local WeaponDropdown = SettingFarm:AddDropdown("WeaponSelect", {
     Multi = false,
     Default = "Melee",
 })
+WeaponDropdown:OnChanged(function(Value) SelectedWeapon = Value end)
 
-WeaponDropdown:OnChanged(function(Value)
-    SelectedWeapon = Value
-end)
-
--- 2. Select Skills (Chọn nhiều kỹ năng cùng lúc)
+-- 2. FIX SELECT SKILLS (Thêm phím F và sửa logic lưu trữ)
 local SkillDropdown = SettingFarm:AddDropdown("SkillSelect", {
     Title = "Select Skills",
-    Description = "Chọn các chiêu thức sẽ tung ra",
-    Values = {"Z", "X", "C", "V", "B"},
+    Values = {"Z", "X", "C", "V", "F"},
     Multi = true,
     Default = {},
 })
 
 SkillDropdown:OnChanged(function(Value)
-    SelectedSkills = Value -- Trả về một bảng (table) các chiêu đã chọn
+    SelectedSkills = {}
+    for i, v in pairs(Value) do
+        SelectedSkills[i] = v
+    end
 end)
 
--- 3. Auto Skill Toggle
+-- 3. FIX AUTO SKILL (Sử dụng vòng lặp kiểm tra bảng hiệu quả hơn)
 local AutoSkillToggle = SettingFarm:AddToggle("AutoSkill", {Title = "Auto Skill", Default = false})
 
--- Logic chạy ngầm cho Auto Skill
 task.spawn(function()
-    while true do
-        task.wait(0.1)
+    while task.wait(0.5) do -- Nghỉ 0.5s để tránh spam quá nhanh gây lag
         if AutoSkillToggle.Value then
-            for skill, state in pairs(SelectedSkills) do
-                if state then
-                    -- Gửi tín hiệu nhấn phím ảo (Cần script hỗ trợ nhấn phím hoặc Remote)
-                    game:GetService("VirtualInputManager"):SendKeyEvent(true, skill, false, game)
+            for skillName, enabled in pairs(SelectedSkills) do
+                if enabled then
+                    -- Nhấn phím
+                    Vim:SendKeyEvent(true, skillName, false, game)
                     task.wait(0.1)
+                    Vim:SendKeyEvent(false, skillName, false, game)
                 end
             end
         end
