@@ -8,12 +8,17 @@ local Window = Fluent:CreateWindow({
     Size = UDim2.fromOffset(580,460)
 })
 
-local SettingFarm = Window:AddTab({Title="Setting Farm"})
-local Farming = Window:AddTab({Title="Farming"})
+-- TABS
+local SettingFarm = Window:AddTab({Title="Setting Farm", Icon = "settings"})
+local Farming = Window:AddTab({Title="Farming", Icon = "rbxassetid://4483345998"})
 
--- Biến lưu trữ
-local SelectedWeapon = "Melee"
+-- VARIABLES (Quản lý toàn bộ dữ liệu)
+_G.DistanceY = 5
+_G.SelectedWeapon = "Melee"
+_G.SelectedStats = "None"
 local SelectedSkills = {}
+
+-- [[ SETTING FARM TAB ]] --
 
 -- 1. Select Weapon
 local WeaponDropdown = SettingFarm:AddDropdown("WeaponSelect", {
@@ -22,39 +27,75 @@ local WeaponDropdown = SettingFarm:AddDropdown("WeaponSelect", {
     Multi = false,
     Default = "Melee",
 })
-WeaponDropdown:OnChanged(function(Value) SelectedWeapon = Value end)
+WeaponDropdown:OnChanged(function(Value)
+    _G.SelectedWeapon = Value
+end)
 
--- 2. FIX SELECT SKILLS (Thêm phím F và sửa logic lưu trữ)
+-- 2. Select Skills (Z, X, C, V, F)
 local SkillDropdown = SettingFarm:AddDropdown("SkillSelect", {
     Title = "Select Skills",
     Values = {"Z", "X", "C", "V", "F"},
     Multi = true,
     Default = {},
 })
-
 SkillDropdown:OnChanged(function(Value)
-    SelectedSkills = {}
-    for i, v in pairs(Value) do
-        SelectedSkills[i] = v
-    end
+    SelectedSkills = Value
 end)
 
--- 3. FIX AUTO SKILL (Sử dụng vòng lặp kiểm tra bảng hiệu quả hơn)
+-- 3. Auto Skill Toggle
 local AutoSkillToggle = SettingFarm:AddToggle("AutoSkill", {Title = "Auto Skill", Default = false})
 
+-- 4. Distance Farm Y (Slider)
+local DistanceSlider = SettingFarm:AddSlider("DistanceY", {
+    Title = "Distance Farm Y",
+    Description = "Độ cao khi đứng trên quái",
+    Default = 5,
+    Min = -20,
+    Max = 20,
+    Rounding = 1,
+    Callback = function(Value)
+        _G.DistanceY = Value
+    end
+})
+
+-- 5. Select Stats
+local StatsDropdown = SettingFarm:AddDropdown("StatsSelect", {
+    Title = "Select Stats",
+    Values = {"None", "Melee", "Defense", "Sword", "Fruit"},
+    Multi = false,
+    Default = "None",
+})
+StatsDropdown:OnChanged(function(Value)
+    _G.SelectedStats = Value
+end)
+
+-- [[ HỆ THỐNG XỬ LÝ (LOGIC) ]] --
+
 task.spawn(function()
-    while task.wait(0.5) do -- Nghỉ 0.5s để tránh spam quá nhanh gây lag
+    while task.wait(0.1) do
+        -- Xử lý Auto Skill (Duyệt qua các phím đã chọn)
         if AutoSkillToggle.Value then
-            for skillName, enabled in pairs(SelectedSkills) do
-                if enabled then
-                    -- Nhấn phím
-                    Vim:SendKeyEvent(true, skillName, false, game)
-                    task.wait(0.1)
-                    Vim:SendKeyEvent(false, skillName, false, game)
+            for skill, state in pairs(SelectedSkills) do
+                if state then
+                    Vim:SendKeyEvent(true, skill, false, game)
+                    task.wait(0.05)
+                    Vim:SendKeyEvent(false, skill, false, game)
                 end
             end
+        end
+
+        -- Xử lý Auto Stats (Nếu chọn chỉ số khác None)
+        if _G.SelectedStats ~= "None" then
+            local args = { [1] = _G.SelectedStats, [2] = 1 } -- Chỉnh sửa theo Remote của game
+            game:GetService("ReplicatedStorage"):WaitForChild("Events"):WaitForChild("Stats"):FireServer(unpack(args))
         end
     end
 end)
 
 Window:SelectTab(1)
+
+Fluent:Notify({
+    Title = "W-Azure",
+    Content = "Đã tải đủ tính năng: Weapon, Skill, Stats, Distance Y",
+    Duration = 5
+})
