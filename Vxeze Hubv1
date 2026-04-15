@@ -7,127 +7,227 @@ local Window = Fluent:CreateWindow({
     Size = UDim2.fromOffset(580,460)
 })
 
--- Tabs
+-- TABS
 local SettingFarm = Window:AddTab({Title="Setting Farm"})
 local Farming = Window:AddTab({Title="Farming"})
 
--- Global
+-- GLOBAL
 getgenv().AutoSkill = false
 getgenv().LevelFarm = false
-getgenv().AutoClick = false
 getgenv().DistanceFarmY = 10
 getgenv().SelectSkills = {}
+getgenv().SelectWeapon = nil
+getgenv().SelectStats = nil
 
--- Anti-AFK (Chống bị văng khi treo máy)
-local VirtualUser = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    VirtualUser:CaptureController()
-    VirtualUser:ClickButton2(Vector2.new())
-end)
+--------------------------------------------------
+-- READ PLAYER LEVEL
+--------------------------------------------------
 
 local function GetPlayerLevel()
-    local player = game.Players.LocalPlayer
-    if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
-        return player.Data.Level.Value
-    end
-    return 0
+
+local player = game.Players.LocalPlayer
+
+if player:FindFirstChild("Data") then
+if player.Data:FindFirstChild("Level") then
+return player.Data.Level.Value
 end
+end
+
+return 0
+
+end
+
+--------------------------------------------------
+-- FARM LIST USING ID
+--------------------------------------------------
 
 local FarmList = {
-    {Min=0,Max=100,Mob="Bandit"},
-    {Min=101,Max=300,Mob="Pirate"},
-    {Min=301,Max=600,Mob="Brute"},
-    {Min=601,Max=1000,Mob="Desert Bandit"},
-    {Min=1001,Max=1500,Mob="Marine Soldier"},
-    {Min=1501,Max=2000,Mob="Frost Rogue"},
-    {Min=2001,Max=3000,Mob="Sorcerer"},
-    {Min=3001,Max=4000,Mob="Curse Spirit"},
-    {Min=4001,Max=5000,Mob="Slime Warrior"},
-    {Min=5001,Max=99999,Mob="Arena Fighter"}
+
+{Min=0,Max=100,MobID=101,NpcID=201},
+{Min=101,Max=300,MobID=102,NpcID=202},
+{Min=301,Max=600,MobID=103,NpcID=203},
+{Min=601,Max=1000,MobID=104,NpcID=204},
+{Min=1001,Max=1500,MobID=105,NpcID=205},
+{Min=1501,Max=2000,MobID=106,NpcID=206},
+{Min=2001,Max=3000,MobID=107,NpcID=207},
+{Min=3001,Max=4000,MobID=108,NpcID=208},
+{Min=4001,Max=5000,MobID=109,NpcID=209},
+{Min=5001,Max=99999,MobID=110,NpcID=210}
+
 }
 
+--------------------------------------------------
+-- GET FARM DATA
+--------------------------------------------------
+
 local function GetFarmData()
-    local level = GetPlayerLevel()
-    for _,v in pairs(FarmList) do
-        if level >= v.Min and level <= v.Max then return v end
-    end
+
+local level = GetPlayerLevel()
+
+for _,v in pairs(FarmList) do
+if level >= v.Min and level <= v.Max then
+return v
+end
 end
 
--- SELECT SKILLS & AUTO CLICK
-SettingFarm:AddToggle("AutoClick",{
-    Title="Auto Click (M1)",
-    Default=false,
-    Callback=function(v) getgenv().AutoClick = v end
+end
+
+--------------------------------------------------
+-- FIND MOB BY ID
+--------------------------------------------------
+
+local function FindMobByID(id)
+
+for _,v in pairs(workspace:GetDescendants()) do
+
+if v:GetAttribute("ID") == id then
+return v
+end
+
+end
+
+end
+
+--------------------------------------------------
+-- WEAPON LIST
+--------------------------------------------------
+
+local Weapons = {}
+
+for _,v in pairs(game.Players.LocalPlayer.Backpack:GetChildren()) do
+table.insert(Weapons,v.Name)
+end
+
+SettingFarm:AddDropdown("Weapon",{
+Title="Select Weapon",
+Values=Weapons,
+Multi=false,
+Callback=function(v)
+getgenv().SelectWeapon = v
+end
 })
+
+--------------------------------------------------
+-- SKILLS
+--------------------------------------------------
 
 local Skills = {"Z","X","C","V","F"}
+
 SettingFarm:AddDropdown("Skills",{
-    Title="Select Skills",
-    Values=Skills,
-    Multi=true,
-    Callback=function(v) getgenv().SelectSkills = v end
+Title="Select Skills",
+Values=Skills,
+Multi=true,
+Callback=function(v)
+getgenv().SelectSkills = v
+end
 })
+
+--------------------------------------------------
+-- AUTO SKILL
+--------------------------------------------------
 
 SettingFarm:AddToggle("AutoSkill",{
-    Title="Auto Skill",
-    Default=false,
-    Callback=function(v) getgenv().AutoSkill = v end
+Title="Auto Skill",
+Default=false,
+Callback=function(v)
+getgenv().AutoSkill = v
+end
 })
 
--- Vòng lặp Auto Click & Skill
 task.spawn(function()
-    while task.wait(0.1) do
-        if getgenv().AutoClick and getgenv().LevelFarm then
-            game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 1)
-            game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 1)
-        end
-        if getgenv().AutoSkill and getgenv().LevelFarm then
-            for key,_ in pairs(getgenv().SelectSkills) do
-                game:GetService("VirtualInputManager"):SendKeyEvent(true,key,false,game)
-                task.wait(0.1)
-                game:GetService("VirtualInputManager"):SendKeyEvent(false,key,false,game)
-            end
-        end
-    end
+
+while task.wait(0.3) do
+
+if getgenv().AutoSkill then
+
+for key,_ in pairs(getgenv().SelectSkills) do
+
+game:GetService("VirtualInputManager"):SendKeyEvent(true,key,false,game)
+task.wait()
+game:GetService("VirtualInputManager"):SendKeyEvent(false,key,false,game)
+
+end
+
+end
+
+end
+
 end)
 
+--------------------------------------------------
+-- DISTANCE FARM
+--------------------------------------------------
+
 SettingFarm:AddSlider("DistanceFarmY",{
-    Title="Distance Farm Y",
-    Default=10,
-    Min=0,
-    Max=50,
-    Rounding=1,
-    Callback=function(v) getgenv().DistanceFarmY = v end
+Title="Distance Farm Y",
+Default=10,
+Min=0,
+Max=50,
+Rounding=1,
+Callback=function(v)
+getgenv().DistanceFarmY = v
+end
 })
+
+--------------------------------------------------
+-- SELECT STATS
+--------------------------------------------------
+
+local Stats = {"Melee","Sword","Defense","Fruit"}
+
+SettingFarm:AddDropdown("Stats",{
+Title="Select Stats",
+Values=Stats,
+Multi=false,
+Callback=function(v)
+getgenv().SelectStats = v
+end
+})
+
+--------------------------------------------------
+-- LEVEL FARM
+--------------------------------------------------
 
 Farming:AddToggle("LevelFarm",{
-    Title="Level Farm (Auto Bring)",
-    Default=false,
-    Callback=function(v) getgenv().LevelFarm = v end
+Title="Level Farm",
+Default=false,
+Callback=function(v)
+getgenv().LevelFarm = v
+end
 })
 
--- FARM LOOP (Teleport & Bring Mob)
+--------------------------------------------------
+-- FARM LOOP
+--------------------------------------------------
+
 task.spawn(function()
-    while task.wait(0.3) do
-        if getgenv().LevelFarm then
-            local Data = GetFarmData()
-            local player = game.Players.LocalPlayer
-            local char = player.Character
-            
-            if Data and char and char:FindFirstChild("HumanoidRootPart") then
-                for _,v in pairs(workspace:GetDescendants()) do
-                    if v.Name == Data.Mob and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                        -- Teleport nhân vật đến quái
-                        char.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, getgenv().DistanceFarmY, 0)
-                        -- Bring quái (Gom quái lại một chỗ)
-                        v.HumanoidRootPart.CanCollide = false
-                        v.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, -getgenv().DistanceFarmY, 0)
-                        break -- Ưu tiên xử lý từng con hoặc bỏ break nếu muốn gom toàn bộ
-                    end
-                end
-            end
-        end
-    end
+
+while task.wait(0.5) do
+
+if getgenv().LevelFarm then
+
+local Data = GetFarmData()
+
+if Data then
+
+local enemy = FindMobByID(Data.MobID)
+
+local player = game.Players.LocalPlayer
+local char = player.Character
+
+if enemy and char and char:FindFirstChild("HumanoidRootPart") then
+
+char.HumanoidRootPart.CFrame =
+enemy.HumanoidRootPart.CFrame * CFrame.new(0,getgenv().DistanceFarmY,0)
+
+end
+
+end
+
+end
+
+end
+
 end)
 
 Window:SelectTab(1)
