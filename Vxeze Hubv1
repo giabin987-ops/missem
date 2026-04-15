@@ -2,7 +2,7 @@ local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/
 
 local Window = Fluent:CreateWindow({
     Title = "W-Azure | Sailor Piece",
-    SubTitle = "by Senpai",
+    SubTitle = "by Senpai (Optimized)",
     TabWidth = 160,
     Size = UDim2.fromOffset(580,460)
 })
@@ -11,21 +11,21 @@ local Window = Fluent:CreateWindow({
 local SettingFarm = Window:AddTab({Title="Setting Farm"})
 local Farming = Window:AddTab({Title="Farming"})
 
--- GLOBAL (Giữ nguyên các biến của bạn)
+-- Global
 getgenv().AutoSkill = false
 getgenv().LevelFarm = false
-getgenv().SelectSkills = {}
+getgenv().AutoClick = false
 getgenv().DistanceFarmY = 10
+getgenv().SelectSkills = {}
 
---------------------------------------------------
--- HIỂN THỊ LEVEL (Sửa để nó tự cập nhật chữ)
---------------------------------------------------
-local LevelDisplay = Farming:AddParagraph({
-    Title = "Player Level",
-    Content = "Loading..."
-})
+-- Anti-AFK (Chống bị văng khi treo máy)
+local VirtualUser = game:GetService("VirtualUser")
+game:GetService("Players").LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
 
-function GetPlayerLevel()
+local function GetPlayerLevel()
     local player = game.Players.LocalPlayer
     if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
         return player.Data.Level.Value
@@ -33,16 +33,6 @@ function GetPlayerLevel()
     return 0
 end
 
-task.spawn(function()
-    while task.wait(1) do
-        local level = GetPlayerLevel()
-        LevelDisplay:SetContent("Current Level: " .. tostring(level))
-    end
-end)
-
---------------------------------------------------
--- FARM LIST (Giữ nguyên list quái)
---------------------------------------------------
 local FarmList = {
     {Min=0,Max=100,Mob="Bandit"},
     {Min=101,Max=300,Mob="Pirate"},
@@ -56,98 +46,86 @@ local FarmList = {
     {Min=5001,Max=99999,Mob="Arena Fighter"}
 }
 
-function GetFarmData()
+local function GetFarmData()
     local level = GetPlayerLevel()
-    for i,v in pairs(FarmList) do
-        if level >= v.Min and level <= v.Max then
-            return v
-        end
+    for _,v in pairs(FarmList) do
+        if level >= v.Min and level <= v.Max then return v end
     end
 end
 
---------------------------------------------------
--- CÁC CHỨC NĂNG TRÊN MENU (Trả lại đủ cho bạn)
---------------------------------------------------
-
--- 1. Chọn Skill (Fix lỗi Multi-dropdown)
-SettingFarm:AddDropdown("Skills", {
-    Title = "Select Skills",
-    Values = {"Z", "X", "C", "V", "F"},
-    Multi = true,
-    Default = {},
-    Callback = function(Value)
-        getgenv().SelectSkills = Value
-    end
+-- SELECT SKILLS & AUTO CLICK
+SettingFarm:AddToggle("AutoClick",{
+    Title="Auto Click (M1)",
+    Default=false,
+    Callback=function(v) getgenv().AutoClick = v end
 })
 
--- 2. Bật/Tắt Auto Skill
-SettingFarm:AddToggle("AutoSkill", {
-    Title = "Auto Skill",
-    Default = false,
-    Callback = function(Value)
-        getgenv().AutoSkill = Value
-    end
+local Skills = {"Z","X","C","V","F"}
+SettingFarm:AddDropdown("Skills",{
+    Title="Select Skills",
+    Values=Skills,
+    Multi=true,
+    Callback=function(v) getgenv().SelectSkills = v end
 })
 
--- 3. Thanh trượt khoảng cách
-SettingFarm:AddSlider("DistanceFarmY", {
-    Title = "Distance Farm Y",
-    Default = 10,
-    Min = 0,
-    Max = 50,
-    Rounding = 1,
-    Callback = function(Value)
-        getgenv().DistanceFarmY = Value
-    end
+SettingFarm:AddToggle("AutoSkill",{
+    Title="Auto Skill",
+    Default=false,
+    Callback=function(v) getgenv().AutoSkill = v end
 })
 
--- 4. Bật/Tắt Farm Level
-Farming:AddToggle("LevelFarm", {
-    Title = "Level Farm",
-    Default = false,
-    Callback = function(Value)
-        getgenv().LevelFarm = Value
-    end
-})
-
---------------------------------------------------
--- VÒNG LẶP LOGIC (Fix lỗi kẹt phím và quái chết)
---------------------------------------------------
-
--- Vòng lặp Auto Skill
+-- Vòng lặp Auto Click & Skill
 task.spawn(function()
-    local VIM = game:GetService("VirtualInputManager")
-    while task.wait(0.5) do
-        if getgenv().AutoSkill then
-            for Key, State in pairs(getgenv().SelectSkills) do
-                if State then
-                    VIM:SendKeyEvent(true, Key, false, game)
-                    task.wait(0.1)
-                    VIM:SendKeyEvent(false, Key, false, game)
-                end
+    while task.wait(0.1) do
+        if getgenv().AutoClick and getgenv().LevelFarm then
+            game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, true, game, 1)
+            game:GetService("VirtualInputManager"):SendMouseButtonEvent(0, 0, 0, false, game, 1)
+        end
+        if getgenv().AutoSkill and getgenv().LevelFarm then
+            for key,_ in pairs(getgenv().SelectSkills) do
+                game:GetService("VirtualInputManager"):SendKeyEvent(true,key,false,game)
+                task.wait(0.1)
+                game:GetService("VirtualInputManager"):SendKeyEvent(false,key,false,game)
             end
         end
     end
 end)
 
--- Vòng lặp Farm Loop
+SettingFarm:AddSlider("DistanceFarmY",{
+    Title="Distance Farm Y",
+    Default=10,
+    Min=0,
+    Max=50,
+    Rounding=1,
+    Callback=function(v) getgenv().DistanceFarmY = v end
+})
+
+Farming:AddToggle("LevelFarm",{
+    Title="Level Farm (Auto Bring)",
+    Default=false,
+    Callback=function(v) getgenv().LevelFarm = v end
+})
+
+-- FARM LOOP (Teleport & Bring Mob)
 task.spawn(function()
-    while task.wait() do
+    while task.wait(0.3) do
         if getgenv().LevelFarm then
-            pcall(function()
-                local Data = GetFarmData()
-                local Character = game.Players.LocalPlayer.Character
-                if Data and Character and Character:FindFirstChild("HumanoidRootPart") then
-                    -- Tìm quái theo tên trong folder Enemies
-                    local enemyFolder = workspace:FindFirstChild("Enemies")
-                    local targetMob = enemyFolder and enemyFolder:FindFirstChild(Data.Mob)
-                    
-                    -- Kiểm tra quái còn sống mới bay vào
-                    if targetMob and targetMob:FindFirstChild("HumanoidRootPart") and targetMob.Humanoid.Health > 0 then
-                        Character.HumanoidRootPart.CFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, getgenv().DistanceFarmY, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+            local Data = GetFarmData()
+            local player = game.Players.LocalPlayer
+            local char = player.Character
+            
+            if Data and char and char:FindFirstChild("HumanoidRootPart") then
+                for _,v in pairs(workspace:GetDescendants()) do
+                    if v.Name == Data.Mob and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
+                        -- Teleport nhân vật đến quái
+                        char.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, getgenv().DistanceFarmY, 0)
+                        -- Bring quái (Gom quái lại một chỗ)
+                        v.HumanoidRootPart.CanCollide = false
+                        v.HumanoidRootPart.CFrame = char.HumanoidRootPart.CFrame * CFrame.new(0, -getgenv().DistanceFarmY, 0)
+                        break -- Ưu tiên xử lý từng con hoặc bỏ break nếu muốn gom toàn bộ
                     end
                 end
-            end)
+            end
         end
     end
 end)
