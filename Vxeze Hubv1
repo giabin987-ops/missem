@@ -1,103 +1,156 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Fluent = loadstring(game:HttpGet("https://github.com"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Vxeze Hub",
+    Title = "W-Azure | Sailor Piece",
     SubTitle = "by Senpai",
     TabWidth = 160,
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = true,
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.RightControl
+    Size = UDim2.fromOffset(580,460)
 })
 
--- ==================== TAB EVENT EGG ====================
-local EventEggTab = Window:AddTab({ Title = "Event Egg", Icon = "egg" })
-local ESP_Enabled = false
+-- Tabs
+local SettingFarm = Window:AddTab({Title="Setting Farm"})
+local Farming = Window:AddTab({Title="Farming"})
 
--- Hàm tạo ESP (Đã thêm kiểm tra lỗi)
-local function createEggESP(obj)
-    if obj:FindFirstChild("EggESP") then return end
-    
-    local targetPart = obj:IsA("BasePart") and obj or obj:FindFirstChildWhichIsA("BasePart")
-    if not targetPart then return end
+-- GLOBAL (Giữ nguyên các biến của bạn)
+getgenv().AutoSkill = false
+getgenv().LevelFarm = false
+getgenv().SelectSkills = {}
+getgenv().DistanceFarmY = 10
 
-    local billboard = Instance.new("BillboardGui")
-    billboard.Name = "EggESP"
-    billboard.Adornee = targetPart
-    billboard.AlwaysOnTop = true
-    billboard.Size = UDim2.new(0, 100, 0, 30)
-    billboard.StudsOffset = Vector3.new(0, 3, 0)
-    billboard.Parent = obj
+--------------------------------------------------
+-- HIỂN THỊ LEVEL (Sửa để nó tự cập nhật chữ)
+--------------------------------------------------
+local LevelDisplay = Farming:AddParagraph({
+    Title = "Player Level",
+    Content = "Loading..."
+})
 
-    local textLabel = Instance.new("TextLabel")
-    textLabel.Size = UDim2.new(1, 0, 1, 0)
-    textLabel.BackgroundTransparency = 1
-    textLabel.Text = "🥚 " .. obj.Name
-    textLabel.TextColor3 = Color3.fromRGB(255, 255, 0)
-    textLabel.TextScaled = true
-    textLabel.Font = Enum.Font.GothamBold
-    textLabel.TextStrokeTransparency = 0
-    textLabel.Parent = billboard
+function GetPlayerLevel()
+    local player = game.Players.LocalPlayer
+    if player:FindFirstChild("Data") and player.Data:FindFirstChild("Level") then
+        return player.Data.Level.Value
+    end
+    return 0
 end
 
--- ==================== TOGGLE VỚI NOTIFY ====================
-local EggToggle = EventEggTab:AddToggle("EggESPToggle", {
-    Title = "ESP Trứng Event", 
-    Default = false,
-    Description = "Hiển thị vị trí trứng qua tường"
+task.spawn(function()
+    while task.wait(1) do
+        local level = GetPlayerLevel()
+        LevelDisplay:SetContent("Current Level: " .. tostring(level))
+    end
+end)
+
+--------------------------------------------------
+-- FARM LIST (Giữ nguyên list quái)
+--------------------------------------------------
+local FarmList = {
+    {Min=0,Max=100,Mob="Bandit"},
+    {Min=101,Max=300,Mob="Pirate"},
+    {Min=301,Max=600,Mob="Brute"},
+    {Min=601,Max=1000,Mob="Desert Bandit"},
+    {Min=1001,Max=1500,Mob="Marine Soldier"},
+    {Min=1501,Max=2000,Mob="Frost Rogue"},
+    {Min=2001,Max=3000,Mob="Sorcerer"},
+    {Min=3001,Max=4000,Mob="Curse Spirit"},
+    {Min=4001,Max=5000,Mob="Slime Warrior"},
+    {Min=5001,Max=99999,Mob="Arena Fighter"}
+}
+
+function GetFarmData()
+    local level = GetPlayerLevel()
+    for i,v in pairs(FarmList) do
+        if level >= v.Min and level <= v.Max then
+            return v
+        end
+    end
+end
+
+--------------------------------------------------
+-- CÁC CHỨC NĂNG TRÊN MENU (Trả lại đủ cho bạn)
+--------------------------------------------------
+
+-- 1. Chọn Skill (Fix lỗi Multi-dropdown)
+SettingFarm:AddDropdown("Skills", {
+    Title = "Select Skills",
+    Values = {"Z", "X", "C", "V", "F"},
+    Multi = true,
+    Default = {},
+    Callback = function(Value)
+        getgenv().SelectSkills = Value
+    end
 })
 
-EggToggle:OnChanged(function(Value)
-    ESP_Enabled = Value
-    
-    if Value then
-        -- Thông báo khi BẬT
-        Fluent:Notify({
-            Title = "Vxeze Hub",
-            Content = "Đã BẬT ESP Trứng! Đang quét bản đồ...",
-            SubTitle = "Hệ thống ESP",
-            Duration = 3
-        })
-        
-        -- Chạy vòng lặp quét trứng liên tục khi đang bật
-        task.spawn(function()
-            while ESP_Enabled do
-                pcall(function()
-                    for _, v in ipairs(workspace:GetDescendants()) do
-                        if not ESP_Enabled then break end
-                        -- Kiểm tra tên (egg, event, hoặc tên quả trứng cụ thể của game)
-                        if (v.Name:lower():find("egg") or v.Name:lower():find("event")) and (v:IsA("Model") or v:IsA("BasePart")) then
-                            createEggESP(v)
-                        end
-                    end
-                end)
-                task.wait(2) -- Quét lại sau mỗi 2 giây để cập nhật trứng mới spawn
-            end
-        end)
-    else
-        -- Thông báo khi TẮT
-        Fluent:Notify({
-            Title = "Vxeze Hub",
-            Content = "Đã TẮT ESP Trứng.",
-            SubTitle = "Hệ thống ESP",
-            Duration = 3
-        })
-        
-        -- Xóa tất cả ESP đang hiện
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj.Name == "EggESP" then
-                obj:Destroy()
+-- 2. Bật/Tắt Auto Skill
+SettingFarm:AddToggle("AutoSkill", {
+    Title = "Auto Skill",
+    Default = false,
+    Callback = function(Value)
+        getgenv().AutoSkill = Value
+    end
+})
+
+-- 3. Thanh trượt khoảng cách
+SettingFarm:AddSlider("DistanceFarmY", {
+    Title = "Distance Farm Y",
+    Default = 10,
+    Min = 0,
+    Max = 50,
+    Rounding = 1,
+    Callback = function(Value)
+        getgenv().DistanceFarmY = Value
+    end
+})
+
+-- 4. Bật/Tắt Farm Level
+Farming:AddToggle("LevelFarm", {
+    Title = "Level Farm",
+    Default = false,
+    Callback = function(Value)
+        getgenv().LevelFarm = Value
+    end
+})
+
+--------------------------------------------------
+-- VÒNG LẶP LOGIC (Fix lỗi kẹt phím và quái chết)
+--------------------------------------------------
+
+-- Vòng lặp Auto Skill
+task.spawn(function()
+    local VIM = game:GetService("VirtualInputManager")
+    while task.wait(0.5) do
+        if getgenv().AutoSkill then
+            for Key, State in pairs(getgenv().SelectSkills) do
+                if State then
+                    VIM:SendKeyEvent(true, Key, false, game)
+                    task.wait(0.1)
+                    VIM:SendKeyEvent(false, Key, false, game)
+                end
             end
         end
     end
 end)
 
--- Tự động chọn Tab đầu tiên khi load
-Window:SelectTab(1)
+-- Vòng lặp Farm Loop
+task.spawn(function()
+    while task.wait() do
+        if getgenv().LevelFarm then
+            pcall(function()
+                local Data = GetFarmData()
+                local Character = game.Players.LocalPlayer.Character
+                if Data and Character and Character:FindFirstChild("HumanoidRootPart") then
+                    -- Tìm quái theo tên trong folder Enemies
+                    local enemyFolder = workspace:FindFirstChild("Enemies")
+                    local targetMob = enemyFolder and enemyFolder:FindFirstChild(Data.Mob)
+                    
+                    -- Kiểm tra quái còn sống mới bay vào
+                    if targetMob and targetMob:FindFirstChild("HumanoidRootPart") and targetMob.Humanoid.Health > 0 then
+                        Character.HumanoidRootPart.CFrame = targetMob.HumanoidRootPart.CFrame * CFrame.new(0, getgenv().DistanceFarmY, 0) * CFrame.Angles(math.rad(-90), 0, 0)
+                    end
+                end
+            end)
+        end
+    end
+end)
 
--- Notify khi script load thành công
-Fluent:Notify({
-    Title = "Vxeze Hub",
-    Content = "Script đã load thành công bởi Senpai!",
-    Duration = 5
-})
+Window:SelectTab(1)
+Fluent:Notify({Title = "W-Azure", Content = "Slot Piece |Vxezestudio!", Duration = 5})
