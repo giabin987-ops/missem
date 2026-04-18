@@ -1,12 +1,12 @@
 local genv = getgenv()
 local fenv = getfenv()
 
--- ==================== 1. KHỞI TẠO NÚT LUFFY TRƯỚC ====================
+-- ==================== 1. KHỞI TẠO NÚT LUFFY (ĐÃ DỊCH LÊN TRÊN) ====================
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
--- Xóa nút cũ nếu có để tránh lỗi chạy lại script
+-- Xóa nút cũ nếu tồn tại
 if CoreGui:FindFirstChild("LuffyToggleGui") then
     CoreGui.LuffyToggleGui:Destroy()
 end
@@ -17,13 +17,13 @@ ToggleGui.Parent = CoreGui
 ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local LuffyBtn = Instance.new("ImageButton")
-LuffyBtn.Name = "LuffyBtn"
+ LuffyBtn.Name = "LuffyBtn"
 LuffyBtn.Parent = ToggleGui
 LuffyBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 LuffyBtn.BackgroundTransparency = 0.3
-LuffyBtn.Position = UDim2.new(0, 30, 0, 350) -- Góc trái dưới
+LuffyBtn.Position = UDim2.new(0, 30, 0, 250) -- Dịch lên trên (số 250 nhỏ hơn 350)
 LuffyBtn.Size = UDim2.new(0, 60, 0, 60)
-LuffyBtn.Image = "rbxassetid://14417128661" -- Ảnh Luffy
+LuffyBtn.Image = "rbxassetid://14417128661" 
 LuffyBtn.Active = true
 
 local UICorner = Instance.new("UICorner")
@@ -31,11 +31,11 @@ UICorner.CornerRadius = UDim.new(1, 0)
 UICorner.Parent = LuffyBtn
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 3
-UIStroke.Color = Color3.fromRGB(255, 0, 0) -- Viền đỏ Luffy
+UIStroke.Thickness = 2.5
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
 UIStroke.Parent = LuffyBtn
 
--- Hiệu ứng kéo thả mượt
+-- Chức năng kéo thả mượt
 local dragging, dragInput, dragStart, startPos
 LuffyBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -67,7 +67,7 @@ local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/rel
 
 local Window = WindUI:CreateWindow({
     Folder = 'tnhuw',
-    Title = 'Vxeze Hub | Luffy Edition',
+    Title = 'Vxeze Hub | chimbe',
     Transparent = true,
     SideBarWidth = 200,
     Author = 'By Senpai',
@@ -75,30 +75,27 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(580, 400),
 })
 
--- Hàm Toggle mượt mà
+-- Kết nối nút Luffy với UI chính
 local uiVisible = true
 LuffyBtn.MouseButton1Click:Connect(function()
-    -- Tìm Main Gui của WindUI (thường là con của CoreGui)
-    local MainGui = CoreGui:FindFirstChild(Window.Folder) or Window.Instance
-    
-    if MainGui then
-        uiVisible = not uiVisible
-        MainGui.Visible = uiVisible
-        
-        -- Hiệu ứng nhấn mượt
-        TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
-            Size = UDim2.fromOffset(55, 55),
-            Rotation = 15
-        }):Play()
-        task.wait(0.1)
-        TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
-            Size = UDim2.fromOffset(60, 60),
-            Rotation = 0
-        }):Play()
+    uiVisible = not uiVisible
+    if Window.Instance then
+        Window.Instance.Visible = uiVisible
     end
+    
+    -- Hiệu ứng nhấn mượt
+    TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+        Size = UDim2.fromOffset(55, 55),
+        Rotation = 10
+    }):Play()
+    task.wait(0.1)
+    TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+        Size = UDim2.fromOffset(60, 60),
+        Rotation = 0
+    }):Play()
 end)
 
--- ==================== 3. TẠO TAB FARM ====================
+-- ==================== 3. CÁC TAB CỦA BẠN ====================
 local TabFarm = Window:Tab({ Title = 'Tab Farm' })
 TabFarm:Paragraph({ Title = 'Made by Noguchi Hyuga', Desc = 'Status: Active' })
 TabFarm:Button({
@@ -106,4 +103,4 @@ TabFarm:Button({
     Callback = function() setclipboard('https://discord.gg') end,
 })
 
-print('SUCCESS: Luffy Toggle UI is ready!')
+print('SUCCESS: Luffy UI Toggle position updated!')
