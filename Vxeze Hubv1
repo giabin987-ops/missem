@@ -1,11 +1,68 @@
 local genv = getgenv()
 local fenv = getfenv()
 
--- WindUI Library
-local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/releases/latest/download/main.lua'))()
+-- ==================== PHẦN 1: NÚT TRÒN LUFFY ĐÓNG/MỞ UI ====================
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
-print('DEBUG: executed')
-print('DEBUG: LOADING . . .')
+-- Tạo ScreenGui để chứa nút
+local ToggleGui = Instance.new("ScreenGui")
+ToggleGui.Name = "LuffyToggleGui"
+ToggleGui.Parent = CoreGui
+ToggleGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+-- Tạo nút tròn Luffy
+local LuffyBtn = Instance.new("ImageButton")
+LuffyBtn.Name = "LuffyBtn"
+LuffyBtn.Parent = ToggleGui
+LuffyBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+LuffyBtn.BorderSizePixel = 0
+LuffyBtn.Position = UDim2.new(0, 20, 0, 350) -- Góc trái màn hình
+LuffyBtn.Size = UDim2.new(0, 60, 0, 60)
+LuffyBtn.Image = "rbxassetid://14417128661" -- Ảnh Luffy
+LuffyBtn.Active = true
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(1, 0)
+UICorner.Parent = LuffyBtn
+
+local UIStroke = Instance.new("UIStroke")
+UIStroke.Thickness = 2
+UIStroke.Color = Color3.fromRGB(255, 255, 255)
+UIStroke.Parent = LuffyBtn
+
+-- Chức năng kéo thả mượt mà
+local dragging, dragInput, dragStart, startPos
+local function update(input)
+    local delta = input.Position - dragStart
+    local targetPos = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    TweenService:Create(LuffyBtn, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {Position = targetPos}):Play()
+end
+
+LuffyBtn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = LuffyBtn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+LuffyBtn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if input == dragInput and dragging then update(input) end
+end)
+
+-- ==================== PHẦN 2: GIAO DIỆN CHÍNH (WIND UI) ====================
+local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/releases/latest/download/main.lua'))()
 
 WindUI:SetTheme('Dark')
 
@@ -19,7 +76,19 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(580, 400),
 })
 
--- ==================== TAB ĐẦU TIÊN ====================
+-- Kết nối nút Luffy với giao diện
+local uiVisible = true
+LuffyBtn.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    if Window.Instance then
+        Window.Instance.Visible = uiVisible
+    end
+    -- Hiệu ứng nhấn nút mượt
+    LuffyBtn:TweenSize(UDim2.fromOffset(55, 55), "Out", "Quad", 0.1, true, function()
+        LuffyBtn:TweenSize(UDim2.fromOffset(60, 60), "Out", "Quad", 0.1, true)
+    end)
+end)
+
 local TabFarm = Window:Tab({
     Title = 'Tab Farm',
 })
@@ -33,10 +102,10 @@ TabFarm:Paragraph({
 TabFarm:Button({
     Locked = false,
     Callback = function()
-        setclipboard('https://discord.gg/Y9d4svT7wD')
+        setclipboard('https://discord.gg')
     end,
     Title = 'My server discord',
     Desc = 'click to copy link',
 })
 
-print('DEBUG: loaded library')
+print('DEBUG: Full Script Loaded with Luffy Toggle')
