@@ -1,12 +1,12 @@
 local genv = getgenv()
 local fenv = getfenv()
 
--- ==================== 1. KHỞI TẠO WIND UI TRƯỚC ====================
+-- ==================== 1. KHỞI TẠO WIND UI ====================
 local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/releases/latest/download/main.lua'))()
 
 local Window = WindUI:CreateWindow({
-    Folder = 'tnhuw', -- Tên folder này phải trùng với tên Gui
-    Title = 'Vxeze Hub | Luffy ',
+    Folder = 'tnhuw',
+    Title = 'Vxeze Hub | Luffy Edition',
     Transparent = true,
     SideBarWidth = 200,
     Author = 'By Senpai',
@@ -14,12 +14,12 @@ local Window = WindUI:CreateWindow({
     Size = UDim2.fromOffset(580, 400),
 })
 
--- ==================== 2. TẠO NÚT LUFFY (ẢNH MỚI + FIX TẮT MỞ) ====================
+-- ==================== 2. TẠO NÚT LUFFY GEAR 5 ====================
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
--- Xóa nút cũ nếu tồn tại để không bị trùng
+-- Xóa nút cũ nếu có
 if CoreGui:FindFirstChild("LuffyToggleGui") then CoreGui.LuffyToggleGui:Destroy() end
 
 local ToggleGui = Instance.new("ScreenGui")
@@ -32,9 +32,9 @@ LuffyBtn.Name = "LuffyBtn"
 LuffyBtn.Parent = ToggleGui
 LuffyBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
 LuffyBtn.BackgroundTransparency = 0.5
-LuffyBtn.Position = UDim2.new(0, 30, 0, 200) -- Vị trí phía trên một xíu
+LuffyBtn.Position = UDim2.new(0, 30, 0, 200) -- Vị trí bạn yêu cầu (dịch lên trên)
 LuffyBtn.Size = UDim2.new(0, 60, 0, 60)
-LuffyBtn.Image = "rbxassetid://13702047245" -- ID ẢNH LUFFY GEAR 5 MỚI
+LuffyBtn.Image = "rbxassetid://13702047245" -- Luffy Gear 5
 LuffyBtn.Active = true
 
 local UICorner = Instance.new("UICorner")
@@ -42,19 +42,29 @@ UICorner.CornerRadius = UDim.new(1, 0)
 UICorner.Parent = LuffyBtn
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2
+UIStroke.Thickness = 2.5
 UIStroke.Color = Color3.fromRGB(255, 255, 255)
 UIStroke.Parent = LuffyBtn
 
--- HÀM FIX TẮT/MỞ UI
+-- HÀM FIX TẮT/MỞ TUYỆT ĐỐI
 local uiVisible = true
 LuffyBtn.MouseButton1Click:Connect(function()
     uiVisible = not uiVisible
     
-    -- Cách fix: Tìm đúng ScreenGui của WindUI dựa trên Folder name
-    local TargetUI = CoreGui:FindFirstChild("tnhuw")
-    if TargetUI then
-        TargetUI.Enabled = uiVisible
+    -- Cách fix mới: Tìm ScreenGui dựa trên thuộc tính của Window
+    if Window and Window.Instance then
+        -- Thử cách 1: Dùng hàm của thư viện
+        if Window.Toggle then 
+            Window:Toggle()
+        else
+            -- Thử cách 2: Tác động trực tiếp vào Enabled của UI chính
+            local mainGui = Window.Instance:FindFirstAncestorOfClass("ScreenGui")
+            if mainGui then
+                mainGui.Enabled = uiVisible
+            else
+                Window.Instance.Visible = uiVisible
+            end
+        end
     end
     
     -- Hiệu ứng nhấn mượt
@@ -63,7 +73,7 @@ LuffyBtn.MouseButton1Click:Connect(function()
     TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Size = UDim2.fromOffset(60, 60)}):Play()
 end)
 
--- Kéo thả mượt mà (Draggable)
+-- Chức năng kéo thả (Draggable)
 local dragging, dragInput, dragStart, startPos
 LuffyBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
