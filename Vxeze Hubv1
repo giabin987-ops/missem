@@ -1,12 +1,25 @@
 local genv = getgenv()
 local fenv = getfenv()
 
--- ==================== 1. KHỞI TẠO NÚT LUFFY ====================
+-- ==================== 1. KHỞI TẠO WIND UI TRƯỚC ====================
+local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/releases/latest/download/main.lua'))()
+
+local Window = WindUI:CreateWindow({
+    Folder = 'tnhuw', -- Tên folder này phải trùng với tên Gui
+    Title = 'Vxeze Hub | Luffy ',
+    Transparent = true,
+    SideBarWidth = 200,
+    Author = 'By Senpai',
+    Theme = 'Dark',
+    Size = UDim2.fromOffset(580, 400),
+})
+
+-- ==================== 2. TẠO NÚT LUFFY (ẢNH MỚI + FIX TẮT MỞ) ====================
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
 
--- Xóa nút cũ nếu có
+-- Xóa nút cũ nếu tồn tại để không bị trùng
 if CoreGui:FindFirstChild("LuffyToggleGui") then CoreGui.LuffyToggleGui:Destroy() end
 
 local ToggleGui = Instance.new("ScreenGui")
@@ -18,10 +31,10 @@ local LuffyBtn = Instance.new("ImageButton")
 LuffyBtn.Name = "LuffyBtn"
 LuffyBtn.Parent = ToggleGui
 LuffyBtn.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-LuffyBtn.BackgroundTransparency = 0.3
-LuffyBtn.Position = UDim2.new(0, 30, 0, 250)
+LuffyBtn.BackgroundTransparency = 0.5
+LuffyBtn.Position = UDim2.new(0, 30, 0, 200) -- Vị trí phía trên một xíu
 LuffyBtn.Size = UDim2.new(0, 60, 0, 60)
-LuffyBtn.Image = "rbxassetid://14417128661" 
+LuffyBtn.Image = "rbxassetid://13702047245" -- ID ẢNH LUFFY GEAR 5 MỚI
 LuffyBtn.Active = true
 
 local UICorner = Instance.new("UICorner")
@@ -29,11 +42,28 @@ UICorner.CornerRadius = UDim.new(1, 0)
 UICorner.Parent = LuffyBtn
 
 local UIStroke = Instance.new("UIStroke")
-UIStroke.Thickness = 2.5
+UIStroke.Thickness = 2
 UIStroke.Color = Color3.fromRGB(255, 255, 255)
 UIStroke.Parent = LuffyBtn
 
--- Chức năng kéo thả
+-- HÀM FIX TẮT/MỞ UI
+local uiVisible = true
+LuffyBtn.MouseButton1Click:Connect(function()
+    uiVisible = not uiVisible
+    
+    -- Cách fix: Tìm đúng ScreenGui của WindUI dựa trên Folder name
+    local TargetUI = CoreGui:FindFirstChild("tnhuw")
+    if TargetUI then
+        TargetUI.Enabled = uiVisible
+    end
+    
+    -- Hiệu ứng nhấn mượt
+    TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Size = UDim2.fromOffset(52, 52)}):Play()
+    task.wait(0.1)
+    TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Size = UDim2.fromOffset(60, 60)}):Play()
+end)
+
+-- Kéo thả mượt mà (Draggable)
 local dragging, dragInput, dragStart, startPos
 LuffyBtn.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -46,9 +76,7 @@ LuffyBtn.InputBegan:Connect(function(input)
     end
 end)
 LuffyBtn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then dragInput = input end
 end)
 UserInputService.InputChanged:Connect(function(input)
     if input == dragInput and dragging then
@@ -58,44 +86,7 @@ UserInputService.InputChanged:Connect(function(input)
     end
 end)
 
--- ==================== 2. CHẠY WIND UI ====================
-local WindUI = loadstring(game:HttpGet('https://github.com/Footagesus/WindUI/releases/latest/download/main.lua'))()
-
-local Window = WindUI:CreateWindow({
-    Folder = 'tnhuw',
-    Title = 'Vxeze Hub | Luffy Edition',
-    Transparent = true,
-    SideBarWidth = 200,
-    Author = 'By Senpai',
-    Theme = 'Dark',
-    Size = UDim2.fromOffset(580, 400),
-})
-
--- ==================== 3. FIX LỖI TẮT/MỞ ====================
-local uiVisible = true
-LuffyBtn.MouseButton1Click:Connect(function()
-    uiVisible = not uiVisible
-    
-    -- Tìm mọi ScreenGui có tên 'tnhuw' trong CoreGui để ẩn/hiện
-    for _, gui in pairs(CoreGui:GetChildren()) do
-        if gui:IsA("ScreenGui") and (gui.Name == "tnhuw" or gui:FindFirstChild("Main")) then
-            gui.Enabled = uiVisible
-        end
-    end
-
-    -- Hiệu ứng nhấn mượt
-    TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
-        Size = UDim2.fromOffset(55, 55),
-        Rotation = 10
-    }):Play()
-    task.wait(0.1)
-    TweenService:Create(LuffyBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
-        Size = UDim2.fromOffset(60, 60),
-        Rotation = 0
-    }):Play()
-end)
-
--- Tab Farm
+-- ==================== 3. CÁC TAB CỦA BẠN ====================
 local TabFarm = Window:Tab({ Title = 'Tab Farm' })
 TabFarm:Paragraph({ Title = 'Made by Noguchi Hyuga', Desc = 'Status: Active' })
 TabFarm:Button({
