@@ -23,7 +23,7 @@ task.wait(4)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - Bloxfruit 2026",
+    Title = "Vxeze Hub - Bloxfruit",
     SubTitle = "Team: " .. tostring(getgenv().Team or "None"),
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -40,9 +40,9 @@ _G.TweenSpeed = 300
 _G.CurrentTween = nil
 
 local VisitedChests = {}
-local isRunning = false -- FIX: tránh spawn MainLogic nhiều lần
+local isRunning = false
 
--- [[ FIX UI TOGGLE: dùng biến local thay vì chỉ dựa _G ]]
+-- [[ UI TOGGLE ]]
 local UIVisible = true
 local UIS = game:GetService("UserInputService")
 
@@ -51,7 +51,6 @@ UIS.InputBegan:Connect(function(input, gpe)
     if input.KeyCode == Enum.KeyCode.RightControl then
         UIVisible = not UIVisible
         pcall(function()
-            -- FIX: dùng Enabled thay vì ToggleMinimize (dễ lỗi hơn)
             Window.GUI.Enabled = UIVisible
         end)
     end
@@ -68,7 +67,7 @@ task.spawn(function()
     end
 end)
 
--- [[ FIX BAY: NoClip ổn định, không dật ]]
+-- [[ NOCLIP ỔN ĐỊNH ]]
 local noClipEnabled = false
 local RunService = game:GetService("RunService")
 local noClipConn = nil
@@ -96,12 +95,13 @@ function StopNoClip()
     end
 end
 
--- [[ TWEEN ]]
+-- [[ FIX DẬT VỀ CHỖ CŨ: Lerp từng bước nhỏ ]]
 function TweenTo(cf)
     local char = player.Character
     if not char then return nil end
 
     local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not root then return nil end
 
     if _G.CurrentTween then
@@ -109,33 +109,54 @@ function TweenTo(cf)
         _G.CurrentTween = nil
     end
 
+    -- Tắt humanoid để server không override vị trí
+    if humanoid then
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+    end
+
+    root.Anchored = true
+
     local dist = (cf.Position - root.Position).Magnitude
 
+    -- Gần thì TP thẳng
     if dist < 300 then
         root.CFrame = cf
+        root.Anchored = false
+        if humanoid then
+            humanoid.WalkSpeed = 16
+            humanoid.JumpPower = 50
+        end
         return nil
     end
 
-    -- FIX BAY DẬT: dùng Sine thay Linear, thêm Anchored tạm thời
-    root.Anchored = true
+    -- Xa thì lerp từng bước ~250 studs, delay 0.07s để server chấp nhận
+    local startCF = root.CFrame
+    local steps = math.ceil(dist / 250)
+    local done = false
 
-    local tween = game:GetService("TweenService"):Create(
-        root,
-        TweenInfo.new(dist / _G.TweenSpeed, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-        {CFrame = cf}
-    )
+    task.spawn(function()
+        for i = 1, steps do
+            if not _G.AutoCyborg then break end
+            local alpha = i / steps
+            root.CFrame = startCF:Lerp(cf, alpha)
+            task.wait(0.07)
+        end
 
-    _G.CurrentTween = tween
-    tween:Play()
+        root.CFrame = cf
+        root.Anchored = false
+        done = true
 
-    tween.Completed:Connect(function()
-        pcall(function()
-            root.Anchored = false
-        end)
-        _G.CurrentTween = nil
+        if humanoid then
+            humanoid.WalkSpeed = 16
+            humanoid.JumpPower = 50
+        end
     end)
 
-    return tween
+    -- Chờ lerp xong
+    repeat task.wait(0.05) until done or not _G.AutoCyborg
+
+    return nil
 end
 
 -- [[ FIND CHEST ]]
@@ -161,13 +182,11 @@ function GetRealChest()
     return target
 end
 
--- [[ FIX HOP SERVER: dùng teleport ngẫu nhiên thay API bị chặn ]]
+-- [[ HOP SERVER ]]
 function HopServer()
     VisitedChests = {}
-
     local TPS = game:GetService("TeleportService")
 
-    -- Thử API trước
     local success = false
     pcall(function()
         local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
@@ -183,7 +202,6 @@ function HopServer()
         end
     end)
 
-    -- FIX: nếu API bị chặn → fallback teleport thẳng
     if not success then
         task.wait(1)
         pcall(function()
@@ -216,8 +234,7 @@ function MainLogic()
                     _G.CurrentTween = nil
                 end
 
-                local t1 = TweenTo(CFrame.new(-6473, 250, -4493))
-                if t1 then t1.Completed:Wait() end
+                TweenTo(CFrame.new(-6473, 250, -4493))
 
                 pcall(function()
                     game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
@@ -225,8 +242,7 @@ function MainLogic()
 
                 task.wait(0.3)
 
-                local t2 = TweenTo(CFrame.new(-6475, 250, -4490))
-                if t2 then t2.Completed:Wait() end
+                TweenTo(CFrame.new(-6475, 250, -4490))
 
                 pcall(function()
                     game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid")
@@ -241,8 +257,7 @@ function MainLogic()
             if chest then
                 retry = 0
 
-                local tw = TweenTo(chest.CFrame + Vector3.new(0, 3, 0))
-                if tw then tw.Completed:Wait() end
+                TweenTo(chest.CFrame + Vector3.new(0, 3, 0))
 
                 if chest and chest.Parent and firetouchinterest then
                     for i = 1, 3 do
