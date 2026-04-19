@@ -42,50 +42,55 @@ _G.TweenSpeed = 300
 _G.CurrentTween = nil
 
 local VisitedChests = {}
-local chestCount = 0 -- đếm số rương
+local chestCount = 0
 local isRunning = false
 local UIVisible = true
 local mouseLoop = true
 
--- [[ THÔNG BÁO TRÊN MÀN HÌNH ]]
+-- [[ THÔNG BÁO MÀN HÌNH ]]
 function ShowNotify(text, color, duration)
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "VxezeNotify"
-    screenGui.ResetOnSpawn = false
-    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-
     pcall(function()
-        screenGui.Parent = game:GetService("CoreGui")
-    end)
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "VxezeNotify"
+        screenGui.ResetOnSpawn = false
+        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 400, 0, 60)
-    frame.Position = UDim2.new(0.5, -200, 0, 20)
-    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-    frame.BackgroundTransparency = 0.2
-    frame.BorderSizePixel = 0
-    frame.Parent = screenGui
+        local ok = pcall(function()
+            screenGui.Parent = game:GetService("CoreGui")
+        end)
+        if not ok then
+            screenGui.Parent = player.PlayerGui
+        end
 
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 10)
-    corner.Parent = frame
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(0, 420, 0, 65)
+        frame.Position = UDim2.new(0.5, -210, 0, 20)
+        frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+        frame.BackgroundTransparency = 0.2
+        frame.BorderSizePixel = 0
+        frame.Parent = screenGui
 
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color or Color3.fromRGB(0, 191, 255)
-    stroke.Thickness = 2
-    stroke.Parent = frame
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = frame
 
-    local label = Instance.new("TextLabel")
-    label.Size = UDim2.new(1, 0, 1, 0)
-    label.BackgroundTransparency = 1
-    label.Text = text
-    label.TextColor3 = color or Color3.fromRGB(0, 191, 255)
-    label.TextScaled = true
-    label.Font = Enum.Font.GothamBold
-    label.Parent = frame
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = color or Color3.fromRGB(0, 191, 255)
+        stroke.Thickness = 2
+        stroke.Parent = frame
 
-    task.delay(duration or 3, function()
-        pcall(function() screenGui:Destroy() end)
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = text
+        label.TextColor3 = color or Color3.fromRGB(0, 191, 255)
+        label.TextScaled = true
+        label.Font = Enum.Font.GothamBold
+        label.Parent = frame
+
+        task.delay(duration or 3, function()
+            pcall(function() screenGui:Destroy() end)
+        end)
     end)
 end
 
@@ -130,8 +135,8 @@ function StopNoClip()
     end
 end
 
--- [[ FIX CHẾT DƯỚI NƯỚC: giữ Y tối thiểu ]]
-local MIN_Y = 30 -- dưới mức này sẽ bị nước
+-- [[ GIỮ Y KHÔNG XUỐNG NƯỚC ]]
+local MIN_Y = 30
 
 function SafeCF(cf)
     local pos = cf.Position
@@ -141,7 +146,20 @@ function SafeCF(cf)
     return CFrame.new(pos) * (cf - cf.Position)
 end
 
--- [[ BAY: LinearVelocity, không tele, không dật, không văng ]]
+-- [[ XÓA VELOCITY CÒN SÓT ]]
+function ClearVelocity()
+    pcall(function()
+        local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        for _, v in pairs(root:GetChildren()) do
+            if v:IsA("LinearVelocity") or v:IsA("Attachment") then
+                v:Destroy()
+            end
+        end
+    end)
+end
+
+-- [[ BAY ]]
 function TweenTo(targetCF)
     local char = player.Character
     if not char then return end
@@ -150,8 +168,10 @@ function TweenTo(targetCF)
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not root then return end
 
-    -- Fix Y để không bay vào nước
     targetCF = SafeCF(targetCF)
+
+    -- Xóa velocity cũ trước
+    ClearVelocity()
 
     if _G.CurrentTween then
         pcall(function() _G.CurrentTween:Cancel() end)
@@ -180,14 +200,11 @@ function TweenTo(targetCF)
     lv.RelativeTo = Enum.ActuatorRelativeTo.World
     lv.Parent = root
 
-    -- Giữ hướng nhìn
     local lookConn = RunService.Heartbeat:Connect(function()
         pcall(function()
-            -- FIX: giữ Y không xuống dưới MIN_Y trong lúc bay
             if root.Position.Y < MIN_Y then
                 root.CFrame = CFrame.new(root.Position.X, MIN_Y, root.Position.Z)
             end
-
             local lookDir = targetCF.Position - root.Position
             if lookDir.Magnitude > 5 then
                 root.CFrame = CFrame.lookAt(
@@ -205,19 +222,19 @@ function TweenTo(targetCF)
     repeat
         task.wait(0.05)
         elapsed += 0.05
-        local remaining = (targetCF.Position - root.Position).Magnitude
-        if remaining < 10 then
+        if (targetCF.Position - root.Position).Magnitude < 10 then
             arrived = true
         end
     until arrived or elapsed >= timeout or not _G.AutoCyborg
 
+    -- Dừng hẳn velocity NGAY LẬP TỨC
     lookConn:Disconnect()
     lv:Destroy()
     att:Destroy()
+    ClearVelocity() -- xóa thêm lần nữa chắc chắn
 
     if arrived then
-        local finalDist = (targetCF.Position - root.Position).Magnitude
-        if finalDist < 30 then
+        if (targetCF.Position - root.Position).Magnitude < 30 then
             root.CFrame = targetCF
         end
     end
@@ -228,6 +245,57 @@ function TweenTo(targetCF)
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
         humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    end)
+end
+
+-- [[ LƯỢM RƯƠNG ]]
+function TouchChest(chest)
+    local char = player.Character
+    if not char then return end
+    local root = char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    -- Bay vào sát rương
+    TweenTo(CFrame.new(chest.Position.X, chest.Position.Y + 1, chest.Position.Z))
+
+    -- Dừng velocity hoàn toàn trước khi lượm
+    ClearVelocity()
+    root.Anchored = true
+    task.wait(0.2)
+
+    -- Lượm rương
+    for i = 1, 5 do
+        pcall(function()
+            if firetouchinterest then
+                firetouchinterest(root, chest, 0)
+                task.wait(0.05)
+                firetouchinterest(root, chest, 1)
+                task.wait(0.05)
+                firetouchinterest(root, chest, 0)
+            end
+        end)
+
+        pcall(function()
+            root.CFrame = CFrame.new(chest.Position)
+        end)
+
+        task.wait(0.1)
+        if not chest or not chest.Parent then break end
+    end
+
+    task.wait(0.2)
+
+    -- Bỏ anchor sau khi lượm xong
+    root.Anchored = false
+    ClearVelocity()
+
+    pcall(function()
+        local humanoid = char:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 16
+            humanoid.JumpPower = 50
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
+        end
     end)
 end
 
@@ -259,26 +327,39 @@ function HopServer()
     VisitedChests = {}
     chestCount = 0
 
+    -- Hiện thông báo trước, chờ render xong rồi mới hop
     ShowNotify("Vxeze Hub Hop Server", Color3.fromRGB(0, 191, 255), 4)
+    task.wait(1.5)
 
     local TPS = game:GetService("TeleportService")
     local success = false
 
-    pcall(function()
-        local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-        local r = game:GetService("HttpService"):JSONDecode(game:HttpGet(Api))
-        if r and r.data then
-            for _, v in pairs(r.data) do
-                if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                    TPS:TeleportToPlaceInstance(game.PlaceId, v.id, player)
-                    success = true
-                    return
+    -- Thử API 3 lần
+    for attempt = 1, 3 do
+        if success then break end
+        pcall(function()
+            local Http = game:GetService("HttpService")
+            local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+            local r = Http:JSONDecode(game:HttpGet(Api))
+            if r and r.data then
+                for _, v in pairs(r.data) do
+                    if v.id ~= game.JobId
+                    and v.playing ~= nil
+                    and v.maxPlayers ~= nil
+                    and v.playing < v.maxPlayers then
+                        TPS:TeleportToPlaceInstance(game.PlaceId, v.id, player)
+                        success = true
+                        return
+                    end
                 end
             end
-        end
-    end)
+        end)
+        if not success then task.wait(2) end
+    end
 
+    -- Fallback
     if not success then
+        ShowNotify("API bị chặn, dùng Teleport thường...", Color3.fromRGB(255, 165, 0), 3)
         task.wait(1)
         pcall(function()
             TPS:Teleport(game.PlaceId, player)
@@ -307,19 +388,14 @@ function MainLogic()
 
             if Fist then
                 TweenTo(CFrame.new(-6473, 250, -4493))
-
                 pcall(function()
                     game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
                 end)
-
                 task.wait(0.3)
-
                 TweenTo(CFrame.new(-6475, 250, -4490))
-
                 pcall(function()
                     game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid")
                 end)
-
                 _G.AutoCyborg = false
                 break
             end
@@ -329,28 +405,17 @@ function MainLogic()
             if chest then
                 retry = 0
 
-                TweenTo(chest.CFrame + Vector3.new(0, 3, 0))
-
-                if chest and chest.Parent and firetouchinterest then
-                    for i = 1, 3 do
-                        pcall(function()
-                            firetouchinterest(root, chest, 0)
-                            firetouchinterest(root, chest, 1)
-                        end)
-                        task.wait(0.1)
-                    end
-                end
+                TouchChest(chest)
 
                 VisitedChests[chest] = true
                 chestCount += 1
 
-                -- [[ HOP SERVER sau 50 rương ]]
+                -- Hop server sau 50 rương
                 if chestCount >= 50 then
                     StopNoClip()
                     HopServer()
                     break
                 end
-
             else
                 retry += 1
                 task.wait(5)
@@ -384,6 +449,7 @@ Tabs.Main:AddToggle("AutoCyborg", {
                 pcall(function() _G.CurrentTween:Cancel() end)
                 _G.CurrentTween = nil
             end
+            ClearVelocity()
             StopNoClip()
         end
     end
