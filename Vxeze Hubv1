@@ -25,7 +25,7 @@ task.wait(4)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - Bloxfruit",
+    Title = "MISS HUB - Bloxfruit 2026",
     SubTitle = "Team: " .. tostring(getgenv().Team or "None"),
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -42,9 +42,52 @@ _G.TweenSpeed = 300
 _G.CurrentTween = nil
 
 local VisitedChests = {}
+local chestCount = 0 -- đếm số rương
 local isRunning = false
 local UIVisible = true
 local mouseLoop = true
+
+-- [[ THÔNG BÁO TRÊN MÀN HÌNH ]]
+function ShowNotify(text, color, duration)
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "VxezeNotify"
+    screenGui.ResetOnSpawn = false
+    screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+    pcall(function()
+        screenGui.Parent = game:GetService("CoreGui")
+    end)
+
+    local frame = Instance.new("Frame")
+    frame.Size = UDim2.new(0, 400, 0, 60)
+    frame.Position = UDim2.new(0.5, -200, 0, 20)
+    frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+    frame.BackgroundTransparency = 0.2
+    frame.BorderSizePixel = 0
+    frame.Parent = screenGui
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 10)
+    corner.Parent = frame
+
+    local stroke = Instance.new("UIStroke")
+    stroke.Color = color or Color3.fromRGB(0, 191, 255)
+    stroke.Thickness = 2
+    stroke.Parent = frame
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, 0, 1, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = color or Color3.fromRGB(0, 191, 255)
+    label.TextScaled = true
+    label.Font = Enum.Font.GothamBold
+    label.Parent = frame
+
+    task.delay(duration or 3, function()
+        pcall(function() screenGui:Destroy() end)
+    end)
+end
 
 -- [[ UI TOGGLE ]]
 UIS.InputBegan:Connect(function(input, gpe)
@@ -87,7 +130,18 @@ function StopNoClip()
     end
 end
 
--- [[ FIX BAY: velocity-based, không tele, không dật, không văng ]]
+-- [[ FIX CHẾT DƯỚI NƯỚC: giữ Y tối thiểu ]]
+local MIN_Y = 30 -- dưới mức này sẽ bị nước
+
+function SafeCF(cf)
+    local pos = cf.Position
+    if pos.Y < MIN_Y then
+        pos = Vector3.new(pos.X, MIN_Y, pos.Z)
+    end
+    return CFrame.new(pos) * (cf - cf.Position)
+end
+
+-- [[ BAY: LinearVelocity, không tele, không dật, không văng ]]
 function TweenTo(targetCF)
     local char = player.Character
     if not char then return end
@@ -96,7 +150,9 @@ function TweenTo(targetCF)
     local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not root then return end
 
-    -- Hủy tween cũ
+    -- Fix Y để không bay vào nước
+    targetCF = SafeCF(targetCF)
+
     if _G.CurrentTween then
         pcall(function() _G.CurrentTween:Cancel() end)
         _G.CurrentTween = nil
@@ -105,19 +161,15 @@ function TweenTo(targetCF)
     local dist = (targetCF.Position - root.Position).Magnitude
     if dist < 5 then return end
 
-    -- Tắt humanoid state để server không override
     pcall(function()
         humanoid.WalkSpeed = 0
         humanoid.JumpPower = 0
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
     end)
 
-    -- Dùng LinearVelocity thay vì set CFrame thẳng → không bị tele dật
-    local speed = _G.TweenSpeed -- studs/s
+    local speed = _G.TweenSpeed
     local direction = (targetCF.Position - root.Position).Unit
-    local travelTime = dist / speed
 
-    -- Tạo LinearVelocity attachment
     local att = Instance.new("Attachment")
     att.Parent = root
 
@@ -128,18 +180,25 @@ function TweenTo(targetCF)
     lv.RelativeTo = Enum.ActuatorRelativeTo.World
     lv.Parent = root
 
-    -- Giữ hướng mặt nhân vật về phía đích
+    -- Giữ hướng nhìn
     local lookConn = RunService.Heartbeat:Connect(function()
         pcall(function()
-            local lookDir = (targetCF.Position - root.Position)
+            -- FIX: giữ Y không xuống dưới MIN_Y trong lúc bay
+            if root.Position.Y < MIN_Y then
+                root.CFrame = CFrame.new(root.Position.X, MIN_Y, root.Position.Z)
+            end
+
+            local lookDir = targetCF.Position - root.Position
             if lookDir.Magnitude > 5 then
-                root.CFrame = CFrame.lookAt(root.Position, root.Position + Vector3.new(lookDir.X, 0, lookDir.Z))
+                root.CFrame = CFrame.lookAt(
+                    root.Position,
+                    root.Position + Vector3.new(lookDir.X, 0, lookDir.Z)
+                )
             end
         end)
     end)
 
-    -- Chờ đến nơi bằng distance check, không dùng wait cố định
-    local timeout = travelTime + 3
+    local timeout = (dist / speed) + 3
     local elapsed = 0
     local arrived = false
 
@@ -152,12 +211,10 @@ function TweenTo(targetCF)
         end
     until arrived or elapsed >= timeout or not _G.AutoCyborg
 
-    -- Dừng velocity
     lookConn:Disconnect()
     lv:Destroy()
     att:Destroy()
 
-    -- Snap nhẹ vào đúng vị trí cuối (chỉ khi đã gần, tránh tele xa)
     if arrived then
         local finalDist = (targetCF.Position - root.Position).Magnitude
         if finalDist < 30 then
@@ -167,7 +224,6 @@ function TweenTo(targetCF)
 
     task.wait(0.1)
 
-    -- Bật lại humanoid
     pcall(function()
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
@@ -201,9 +257,13 @@ end
 -- [[ HOP SERVER ]]
 function HopServer()
     VisitedChests = {}
-    local TPS = game:GetService("TeleportService")
+    chestCount = 0
 
+    ShowNotify("Vxeze Hub Hop Server", Color3.fromRGB(0, 191, 255), 4)
+
+    local TPS = game:GetService("TeleportService")
     local success = false
+
     pcall(function()
         local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
         local r = game:GetService("HttpService"):JSONDecode(game:HttpGet(Api))
@@ -231,6 +291,7 @@ function MainLogic()
     repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
     StartNoClip()
+    chestCount = 0
 
     local retry = 0
 
@@ -281,6 +342,15 @@ function MainLogic()
                 end
 
                 VisitedChests[chest] = true
+                chestCount += 1
+
+                -- [[ HOP SERVER sau 50 rương ]]
+                if chestCount >= 50 then
+                    StopNoClip()
+                    HopServer()
+                    break
+                end
+
             else
                 retry += 1
                 task.wait(5)
