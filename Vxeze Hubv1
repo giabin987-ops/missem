@@ -25,7 +25,7 @@ task.wait(4)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - Bloxfruit 2026",
+    Title = "MISS HUB - Bloxfruit",
     SubTitle = "Team: " .. tostring(getgenv().Team or "None"),
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
