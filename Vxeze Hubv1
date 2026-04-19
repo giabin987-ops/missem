@@ -1,7 +1,6 @@
 repeat task.wait() until game:IsLoaded()
 local player = game.Players.LocalPlayer
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UIS = game:GetService("UserInputService")
 
 -- [[ AUTO TEAM ]]
@@ -26,7 +25,7 @@ task.wait(4)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "MISS HUB - Bloxfruit 2026",
+    Title = "MISS HUB - Bloxfruit",
     SubTitle = "Team: " .. tostring(getgenv().Team or "None"),
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -88,7 +87,7 @@ function StopNoClip()
     end
 end
 
--- [[ FIX BAY MƯỢT + KHÔNG DẬT ]]
+-- [[ FIX BAY: velocity-based, không tele, không dật, không văng ]]
 function TweenTo(targetCF)
     local char = player.Character
     if not char then return end
@@ -99,60 +98,81 @@ function TweenTo(targetCF)
 
     -- Hủy tween cũ
     if _G.CurrentTween then
-        _G.CurrentTween:Cancel()
+        pcall(function() _G.CurrentTween:Cancel() end)
         _G.CurrentTween = nil
     end
 
     local dist = (targetCF.Position - root.Position).Magnitude
+    if dist < 5 then return end
 
-    -- Tắt humanoid để server không kéo ngược
-    if humanoid then
+    -- Tắt humanoid state để server không override
+    pcall(function()
         humanoid.WalkSpeed = 0
         humanoid.JumpPower = 0
         humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-    end
+    end)
 
-    -- Anchor để physics không ảnh hưởng
-    root.Anchored = true
+    -- Dùng LinearVelocity thay vì set CFrame thẳng → không bị tele dật
+    local speed = _G.TweenSpeed -- studs/s
+    local direction = (targetCF.Position - root.Position).Unit
+    local travelTime = dist / speed
 
-    -- Gần → TP thẳng
-    if dist < 100 then
-        root.CFrame = targetCF
-        root.Anchored = false
-        if humanoid then
-            humanoid.WalkSpeed = 16
-            humanoid.JumpPower = 50
-            humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    -- Tạo LinearVelocity attachment
+    local att = Instance.new("Attachment")
+    att.Parent = root
+
+    local lv = Instance.new("LinearVelocity")
+    lv.Attachment0 = att
+    lv.VectorVelocity = direction * speed
+    lv.MaxForce = math.huge
+    lv.RelativeTo = Enum.ActuatorRelativeTo.World
+    lv.Parent = root
+
+    -- Giữ hướng mặt nhân vật về phía đích
+    local lookConn = RunService.Heartbeat:Connect(function()
+        pcall(function()
+            local lookDir = (targetCF.Position - root.Position)
+            if lookDir.Magnitude > 5 then
+                root.CFrame = CFrame.lookAt(root.Position, root.Position + Vector3.new(lookDir.X, 0, lookDir.Z))
+            end
+        end)
+    end)
+
+    -- Chờ đến nơi bằng distance check, không dùng wait cố định
+    local timeout = travelTime + 3
+    local elapsed = 0
+    local arrived = false
+
+    repeat
+        task.wait(0.05)
+        elapsed += 0.05
+        local remaining = (targetCF.Position - root.Position).Magnitude
+        if remaining < 10 then
+            arrived = true
         end
-        return
+    until arrived or elapsed >= timeout or not _G.AutoCyborg
+
+    -- Dừng velocity
+    lookConn:Disconnect()
+    lv:Destroy()
+    att:Destroy()
+
+    -- Snap nhẹ vào đúng vị trí cuối (chỉ khi đã gần, tránh tele xa)
+    if arrived then
+        local finalDist = (targetCF.Position - root.Position).Magnitude
+        if finalDist < 30 then
+            root.CFrame = targetCF
+        end
     end
 
-    -- Xa → chia waypoint mỗi 200 studs, lerp mượt giữa các điểm
-    local startCF = root.CFrame
-    local steps = math.ceil(dist / 200)
-    local stepTime = 0.08 -- đủ chậm để server không reject
+    task.wait(0.1)
 
-    for i = 1, steps do
-        if not _G.AutoCyborg then break end
-
-        local alpha = i / steps
-        -- easing out để điểm cuối không bị overshoot
-        local easedAlpha = 1 - (1 - alpha) ^ 2
-        root.CFrame = startCF:Lerp(targetCF, easedAlpha)
-        task.wait(stepTime)
-    end
-
-    -- Đảm bảo đến đúng vị trí
-    root.CFrame = targetCF
-    task.wait(0.05)
-
-    -- Bỏ anchor, bật lại humanoid
-    root.Anchored = false
-    if humanoid then
+    -- Bật lại humanoid
+    pcall(function()
         humanoid.WalkSpeed = 16
         humanoid.JumpPower = 50
         humanoid:ChangeState(Enum.HumanoidStateType.Running)
-    end
+    end)
 end
 
 -- [[ FIND CHEST ]]
@@ -291,7 +311,7 @@ Tabs.Main:AddToggle("AutoCyborg", {
             task.spawn(MainLogic)
         elseif not v then
             if _G.CurrentTween then
-                _G.CurrentTween:Cancel()
+                pcall(function() _G.CurrentTween:Cancel() end)
                 _G.CurrentTween = nil
             end
             StopNoClip()
