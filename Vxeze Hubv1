@@ -1,5 +1,8 @@
 repeat task.wait() until game:IsLoaded()
 local player = game.Players.LocalPlayer
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UIS = game:GetService("UserInputService")
 
 -- [[ AUTO TEAM ]]
 task.spawn(function()
@@ -23,7 +26,7 @@ task.wait(4)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 local Window = Fluent:CreateWindow({
-    Title = "Vxeze Hub - Bloxfruit",
+    Title = "MISS HUB - Bloxfruit 2026",
     SubTitle = "Team: " .. tostring(getgenv().Team or "None"),
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
@@ -41,11 +44,10 @@ _G.CurrentTween = nil
 
 local VisitedChests = {}
 local isRunning = false
+local UIVisible = true
+local mouseLoop = true
 
 -- [[ UI TOGGLE ]]
-local UIVisible = true
-local UIS = game:GetService("UserInputService")
-
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.RightControl then
@@ -56,31 +58,23 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- giữ chuột
-local mouseLoop = true
 task.spawn(function()
     while mouseLoop do
         task.wait(1)
-        pcall(function()
-            UIS.MouseIconEnabled = true
-        end)
+        pcall(function() UIS.MouseIconEnabled = true end)
     end
 end)
 
--- [[ NOCLIP ỔN ĐỊNH ]]
-local noClipEnabled = false
-local RunService = game:GetService("RunService")
+-- [[ NOCLIP ]]
 local noClipConn = nil
 
 function StartNoClip()
     if noClipConn then return end
-    noClipEnabled = true
     noClipConn = RunService.Stepped:Connect(function()
-        if not noClipEnabled then return end
         local char = player.Character
         if not char then return end
         for _, v in pairs(char:GetDescendants()) do
-            if v:IsA("BasePart") and v.CanCollide then
+            if v:IsA("BasePart") then
                 v.CanCollide = false
             end
         end
@@ -88,75 +82,77 @@ function StartNoClip()
 end
 
 function StopNoClip()
-    noClipEnabled = false
     if noClipConn then
         noClipConn:Disconnect()
         noClipConn = nil
     end
 end
 
--- [[ FIX DẬT VỀ CHỖ CŨ: Lerp từng bước nhỏ ]]
-function TweenTo(cf)
+-- [[ FIX BAY MƯỢT + KHÔNG DẬT ]]
+function TweenTo(targetCF)
     local char = player.Character
-    if not char then return nil end
+    if not char then return end
 
     local root = char:FindFirstChild("HumanoidRootPart")
     local humanoid = char:FindFirstChildOfClass("Humanoid")
-    if not root then return nil end
+    if not root then return end
 
+    -- Hủy tween cũ
     if _G.CurrentTween then
         _G.CurrentTween:Cancel()
         _G.CurrentTween = nil
     end
 
-    -- Tắt humanoid để server không override vị trí
+    local dist = (targetCF.Position - root.Position).Magnitude
+
+    -- Tắt humanoid để server không kéo ngược
     if humanoid then
         humanoid.WalkSpeed = 0
         humanoid.JumpPower = 0
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
     end
 
+    -- Anchor để physics không ảnh hưởng
     root.Anchored = true
 
-    local dist = (cf.Position - root.Position).Magnitude
-
-    -- Gần thì TP thẳng
-    if dist < 300 then
-        root.CFrame = cf
+    -- Gần → TP thẳng
+    if dist < 100 then
+        root.CFrame = targetCF
         root.Anchored = false
         if humanoid then
             humanoid.WalkSpeed = 16
             humanoid.JumpPower = 50
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
         end
-        return nil
+        return
     end
 
-    -- Xa thì lerp từng bước ~250 studs, delay 0.07s để server chấp nhận
+    -- Xa → chia waypoint mỗi 200 studs, lerp mượt giữa các điểm
     local startCF = root.CFrame
-    local steps = math.ceil(dist / 250)
-    local done = false
+    local steps = math.ceil(dist / 200)
+    local stepTime = 0.08 -- đủ chậm để server không reject
 
-    task.spawn(function()
-        for i = 1, steps do
-            if not _G.AutoCyborg then break end
-            local alpha = i / steps
-            root.CFrame = startCF:Lerp(cf, alpha)
-            task.wait(0.07)
-        end
+    for i = 1, steps do
+        if not _G.AutoCyborg then break end
 
-        root.CFrame = cf
-        root.Anchored = false
-        done = true
+        local alpha = i / steps
+        -- easing out để điểm cuối không bị overshoot
+        local easedAlpha = 1 - (1 - alpha) ^ 2
+        root.CFrame = startCF:Lerp(targetCF, easedAlpha)
+        task.wait(stepTime)
+    end
 
-        if humanoid then
-            humanoid.WalkSpeed = 16
-            humanoid.JumpPower = 50
-        end
-    end)
+    -- Đảm bảo đến đúng vị trí
+    root.CFrame = targetCF
+    task.wait(0.05)
 
-    -- Chờ lerp xong
-    repeat task.wait(0.05) until done or not _G.AutoCyborg
-
-    return nil
+    -- Bỏ anchor, bật lại humanoid
+    root.Anchored = false
+    if humanoid then
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+        humanoid:ChangeState(Enum.HumanoidStateType.Running)
+    end
 end
 
 -- [[ FIND CHEST ]]
@@ -229,11 +225,6 @@ function MainLogic()
                 or player.Backpack:FindFirstChild("Fist of Darkness")
 
             if Fist then
-                if _G.CurrentTween then
-                    _G.CurrentTween:Cancel()
-                    _G.CurrentTween = nil
-                end
-
                 TweenTo(CFrame.new(-6473, 250, -4493))
 
                 pcall(function()
