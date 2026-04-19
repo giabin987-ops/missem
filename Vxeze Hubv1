@@ -146,7 +146,7 @@ function SafeCF(cf)
     return CFrame.new(pos) * (cf - cf.Position)
 end
 
--- [[ XÓA VELOCITY CÒN SÓT ]]
+-- [[ XÓA VELOCITY ]]
 function ClearVelocity()
     pcall(function()
         local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
@@ -156,6 +156,8 @@ function ClearVelocity()
                 v:Destroy()
             end
         end
+        root.AssemblyLinearVelocity = Vector3.zero
+        root.AssemblyAngularVelocity = Vector3.zero
     end)
 end
 
@@ -169,8 +171,6 @@ function TweenTo(targetCF)
     if not root then return end
 
     targetCF = SafeCF(targetCF)
-
-    -- Xóa velocity cũ trước
     ClearVelocity()
 
     if _G.CurrentTween then
@@ -227,16 +227,17 @@ function TweenTo(targetCF)
         end
     until arrived or elapsed >= timeout or not _G.AutoCyborg
 
-    -- Dừng hẳn velocity NGAY LẬP TỨC
     lookConn:Disconnect()
     lv:Destroy()
     att:Destroy()
-    ClearVelocity() -- xóa thêm lần nữa chắc chắn
 
-    if arrived then
-        if (targetCF.Position - root.Position).Magnitude < 30 then
-            root.CFrame = targetCF
-        end
+    -- Dừng hoàn toàn
+    ClearVelocity()
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+
+    if arrived and (targetCF.Position - root.Position).Magnitude < 30 then
+        root.CFrame = targetCF
     end
 
     task.wait(0.1)
@@ -253,19 +254,32 @@ function TouchChest(chest)
     local char = player.Character
     if not char then return end
     local root = char:FindFirstChild("HumanoidRootPart")
+    local humanoid = char:FindFirstChildOfClass("Humanoid")
     if not root then return end
 
-    -- Bay vào sát rương
-    TweenTo(CFrame.new(chest.Position.X, chest.Position.Y + 1, chest.Position.Z))
+    TweenTo(CFrame.new(chest.Position.X, chest.Position.Y + 2, chest.Position.Z))
 
-    -- Dừng velocity hoàn toàn trước khi lượm
+    -- Dừng hoàn toàn trước khi lượm
     ClearVelocity()
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
     root.Anchored = true
+
+    pcall(function()
+        humanoid.WalkSpeed = 0
+        humanoid.JumpPower = 0
+        humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+    end)
+
+    -- Snap cứng vào rương không cho trượt qua
+    root.CFrame = CFrame.new(chest.Position.X, chest.Position.Y + 2, chest.Position.Z)
     task.wait(0.2)
 
-    -- Lượm rương
-    for i = 1, 5 do
+    -- Lượm
+    for i = 1, 8 do
+        if not chest or not chest.Parent then break end
         pcall(function()
+            root.CFrame = CFrame.new(chest.Position.X, chest.Position.Y + 2, chest.Position.Z)
             if firetouchinterest then
                 firetouchinterest(root, chest, 0)
                 task.wait(0.05)
@@ -274,28 +288,23 @@ function TouchChest(chest)
                 firetouchinterest(root, chest, 0)
             end
         end)
-
-        pcall(function()
-            root.CFrame = CFrame.new(chest.Position)
-        end)
-
         task.wait(0.1)
-        if not chest or not chest.Parent then break end
     end
 
     task.wait(0.2)
 
-    -- Bỏ anchor sau khi lượm xong
-    root.Anchored = false
+    -- Reset sau lượm
     ClearVelocity()
+    root.AssemblyLinearVelocity = Vector3.zero
+    root.AssemblyAngularVelocity = Vector3.zero
+    root.Anchored = false
+
+    task.wait(0.1)
 
     pcall(function()
-        local humanoid = char:FindFirstChildOfClass("Humanoid")
-        if humanoid then
-            humanoid.WalkSpeed = 16
-            humanoid.JumpPower = 50
-            humanoid:ChangeState(Enum.HumanoidStateType.Running)
-        end
+        humanoid.WalkSpeed = 16
+        humanoid.JumpPower = 50
+        humanoid:ChangeState(Enum.HumanoidStateType.Running)
     end)
 end
 
@@ -327,14 +336,12 @@ function HopServer()
     VisitedChests = {}
     chestCount = 0
 
-    -- Hiện thông báo trước, chờ render xong rồi mới hop
     ShowNotify("Vxeze Hub Hop Server", Color3.fromRGB(0, 191, 255), 4)
     task.wait(1.5)
 
     local TPS = game:GetService("TeleportService")
     local success = false
 
-    -- Thử API 3 lần
     for attempt = 1, 3 do
         if success then break end
         pcall(function()
@@ -357,7 +364,6 @@ function HopServer()
         if not success then task.wait(2) end
     end
 
-    -- Fallback
     if not success then
         ShowNotify("API bị chặn, dùng Teleport thường...", Color3.fromRGB(255, 165, 0), 3)
         task.wait(1)
@@ -410,8 +416,10 @@ function MainLogic()
                 VisitedChests[chest] = true
                 chestCount += 1
 
-                -- Hop server sau 50 rương
-                if chestCount >= 50 then
+                -- Hop server sau 20 rương
+                if chestCount >= 20 then
+                    ShowNotify("Vxeze Hub Hop Server", Color3.fromRGB(0, 191, 255), 4)
+                    task.wait(1.5)
                     StopNoClip()
                     HopServer()
                     break
