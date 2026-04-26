@@ -2,22 +2,22 @@
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 -- ==========================================
--- LOGIC ESP TỐI ƯU CHO RIVALS
+-- LOGIC ESP ĐÃ FIX LỖI "DATAMODEL UGC"
 -- ==========================================
 local ESP = {
     Enabled = false,
     Objects = {},
     Connections = {},
-    Color = Color3.fromRGB(255, 0, 0) -- Mặc định màu đỏ
+    Color = Color3.fromRGB(255, 0, 0)
 }
 
-local Players = game:GetService("Players")
+-- Cách gọi Service an toàn nhất
+local Players = game:FindService("Players") or game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
 function ESP:CreateHighlight(char)
     if not char then return end
     
-    -- Xóa highlight cũ nếu có
     local old = char:FindFirstChild("Vxeze_ESP")
     if old then old:Destroy() end
 
@@ -29,8 +29,6 @@ function ESP:CreateHighlight(char)
     highlight.FillTransparency = 0.5
     highlight.OutlineTransparency = 0
     highlight.Parent = char
-    
-    return highlight
 end
 
 function ESP:Add(player)
@@ -38,14 +36,14 @@ function ESP:Add(player)
 
     local function onCharAdded(char)
         if self.Enabled then
-            task.wait(0.5) -- Đợi nhân vật load xong trong Rivals
+            task.wait(0.5)
             self:CreateHighlight(char)
         end
     end
 
     player.CharacterAdded:Connect(onCharAdded)
     if player.Character then
-        onCharAdded(player.Character)
+        task.spawn(onCharAdded, player.Character)
     end
 end
 
@@ -64,9 +62,9 @@ function ESP:Disable()
     self.Enabled = false
     if self.Connections.PlayerAdded then
         self.Connections.PlayerAdded:Disconnect()
+        self.Connections.PlayerAdded = nil
     end
     
-    -- Xóa sạch Highlight khỏi game
     for _, player in pairs(Players:GetPlayers()) do
         if player.Character then
             local h = player.Character:FindFirstChild("Vxeze_ESP")
@@ -92,7 +90,6 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" })
 }
 
--- Nút bật tắt ESP
 local EspToggle = Tabs.Main:AddToggle("EspPlayer", {
     Title = "Enable ESP (Wallhack)", 
     Default = false 
@@ -106,7 +103,6 @@ EspToggle:OnChanged(function()
     end
 end)
 
--- Nút đổi màu ESP
 Tabs.Main:AddColorpicker("EspColor", {
     Title = "ESP Color",
     Default = Color3.fromRGB(255, 0, 0),
@@ -125,6 +121,6 @@ Window:SelectTab(1)
 
 Fluent:Notify({
     Title = "Vxeze Hub",
-    Content = "Đã sẵn sàng cho Rivals! Chúc SenPai chơi vui vẻ.",
+    Content = "Đã sửa lỗi DataModel! Chúc bạn trải nghiệm tốt.",
     Duration = 5
 })
