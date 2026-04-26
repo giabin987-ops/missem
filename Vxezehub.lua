@@ -1,49 +1,52 @@
 -- Kiểm tra và tải Fluent UI Library
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/local Fluent = loadstring(game:HttpGet("https://github.com"))()
 
 -- ==========================================
--- HỆ THỐNG ESP (Tối ưu cho cả PE & PC)
+-- LOGIC ESP TỐI ƯU CHO RIVALS
 -- ==========================================
 local ESP = {
     Enabled = false,
     Objects = {},
-    Connections = {}
+    Connections = {},
+    Color = Color3.fromRGB(255, 0, 0) -- Mặc định màu đỏ
 }
 
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
+function ESP:CreateHighlight(char)
+    if not char then return end
+    
+    -- Xóa highlight cũ nếu có
+    local old = char:FindFirstChild("Vxeze_ESP")
+    if old then old:Destroy() end
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "Vxeze_ESP"
+    highlight.Adornee = char
+    highlight.FillColor = self.Color
+    highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
+    highlight.FillTransparency = 0.5
+    highlight.OutlineTransparency = 0
+    highlight.Parent = char
+    
+    return highlight
+end
+
 function ESP:Add(player)
     if player == LocalPlayer then return end
 
-    local function setup(char)
-        if not self.Enabled then return end
-        
-        -- Chờ HumanoidRootPart xuất hiện (quan trọng cho Executor Mobile)
-        local hrp = char:WaitForChild("HumanoidRootPart", 10)
-        if not hrp then return end
-
-        -- Xóa Highlight cũ nếu tồn tại
-        if char:FindFirstChild("ESPHighlight") then
-            char.ESPHighlight:Destroy()
+    local function onCharAdded(char)
+        if self.Enabled then
+            task.wait(0.5) -- Đợi nhân vật load xong trong Rivals
+            self:CreateHighlight(char)
         end
-
-        -- Tạo Highlight mới
-        local highlight = Instance.new("Highlight")
-        highlight.Name = "ESPHighlight"
-        highlight.Adornee = char
-        highlight.FillColor = Color3.fromRGB(255, 0, 0)
-        highlight.OutlineColor = Color3.fromRGB(255, 255, 255)
-        highlight.FillTransparency = 0.5
-        highlight.OutlineTransparency = 0
-        highlight.Parent = char
-
-        self.Objects[player] = highlight
     end
 
-    if player.Character then task.spawn(setup, player.Character) end
-    local conn = player.CharacterAdded:Connect(setup)
-    table.insert(self.Connections, conn)
+    player.CharacterAdded:Connect(onCharAdded)
+    if player.Character then
+        onCharAdded(player.Character)
+    end
 end
 
 function ESP:Enable()
@@ -51,35 +54,36 @@ function ESP:Enable()
     for _, player in pairs(Players:GetPlayers()) do
         self:Add(player)
     end
-    local joinConn = Players.PlayerAdded:Connect(function(player)
+
+    self.Connections.PlayerAdded = Players.PlayerAdded:Connect(function(player)
         self:Add(player)
     end)
-    table.insert(self.Connections, joinConn)
 end
 
 function ESP:Disable()
     self.Enabled = false
-    for _, obj in pairs(self.Objects) do if obj then obj:Destroy() end end
-    self.Objects = {}
-    for _, conn in pairs(self.Connections) do conn:Disconnect() end
-    self.Connections = {}
+    if self.Connections.PlayerAdded then
+        self.Connections.PlayerAdded:Disconnect()
+    end
     
-    for _, p in pairs(Players:GetPlayers()) do
-        if p.Character and p.Character:FindFirstChild("ESPHighlight") then
-            p.Character.ESPHighlight:Destroy()
+    -- Xóa sạch Highlight khỏi game
+    for _, player in pairs(Players:GetPlayers()) do
+        if player.Character then
+            local h = player.Character:FindFirstChild("Vxeze_ESP")
+            if h then h:Destroy() end
         end
     end
 end
 
 -- ==========================================
--- CẤU HÌNH GIAO DIỆN Vxeze Hub
+-- GIAO DIỆN VXEZE HUB
 -- ==========================================
 local Window = Fluent:CreateWindow({
-    Title = "Vxeze Hub",
+    Title = "Vxeze Hub | Rivals",
     SubTitle = "By SenPai",
     TabWidth = 160,
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = false, -- Tắt Acrylic để mượt hơn trên máy yếu/Mobile
+    Acrylic = false, 
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl
 })
@@ -88,9 +92,9 @@ local Tabs = {
     Main = Window:AddTab({ Title = "Main", Icon = "home" })
 }
 
--- Chức năng bật/tắt ESP
+-- Nút bật tắt ESP
 local EspToggle = Tabs.Main:AddToggle("EspPlayer", {
-    Title = "Enable ESP Player", 
+    Title = "Enable ESP (Wallhack)", 
     Default = false 
 })
 
@@ -102,14 +106,16 @@ EspToggle:OnChanged(function()
     end
 end)
 
--- Nút chỉnh màu ESP (Tiện ích thêm)
+-- Nút đổi màu ESP
 Tabs.Main:AddColorpicker("EspColor", {
     Title = "ESP Color",
     Default = Color3.fromRGB(255, 0, 0),
     Callback = function(Value)
+        ESP.Color = Value
         for _, player in pairs(Players:GetPlayers()) do
-            if player.Character and player.Character:FindFirstChild("ESPHighlight") then
-                player.Character.ESPHighlight:FillColor = Value
+            if player.Character then
+                local h = player.Character:FindFirstChild("Vxeze_ESP")
+                if h then h.FillColor = Value end
             end
         end
     end
@@ -119,6 +125,6 @@ Window:SelectTab(1)
 
 Fluent:Notify({
     Title = "Vxeze Hub",
-    Content = "Tương thích tốt trên Mobile & PC!",
+    Content = "Đã sẵn sàng cho Rivals! Chúc SenPai chơi vui vẻ.",
     Duration = 5
 })
