@@ -1,5 +1,5 @@
 -- Kiểm tra và tải Fluent UI Library
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/local Fluent = loadstring(game:HttpGet("https://github.com"))()
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
 -- ==========================================
 -- LOGIC ESP TỐI ƯU CHO RIVALS
