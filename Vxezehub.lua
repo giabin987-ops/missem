@@ -64,6 +64,43 @@ task.spawn(function()
 end)
 
 -- =========================
+-- THÔNG BÁO MÀN HÌNH
+-- =========================
+function ShowHopNotification()
+    pcall(function()
+        -- Xoá thông báo cũ nếu còn
+        local existing = game:GetService("CoreGui"):FindFirstChild("HopNotif")
+        if existing then existing:Destroy() end
+
+        local screenGui = Instance.new("ScreenGui")
+        screenGui.Name = "HopNotif"
+        screenGui.ResetOnSpawn = false
+        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+
+        local frame = Instance.new("Frame", screenGui)
+        frame.Size = UDim2.new(0, 400, 0, 60)
+        frame.Position = UDim2.new(0.5, -200, 0.1, 0)
+        frame.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
+        frame.BorderSizePixel = 0
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+
+        local label = Instance.new("TextLabel", frame)
+        label.Size = UDim2.new(1, 0, 1, 0)
+        label.BackgroundTransparency = 1
+        label.Text = "VxezeHub Hop Server!"
+        label.TextColor3 = Color3.fromRGB(255, 255, 255)
+        label.TextScaled = true
+        label.Font = Enum.Font.GothamBold
+
+        screenGui.Parent = game:GetService("CoreGui")
+
+        task.delay(3, function()
+            pcall(function() screenGui:Destroy() end)
+        end)
+    end)
+end
+
+-- =========================
 -- TWEEN
 -- =========================
 function TweenTo(cf)
@@ -134,61 +171,46 @@ function GetRealChest()
 end
 
 -- =========================
--- 🔥 HOP SERVER (FIX CHUẨN)
+-- 🔥 HOP SERVER (API + SPAM, TRÁNH LỖI 773)
 -- =========================
 function HopServer()
     VisitedChests = {}
+
+    ShowHopNotification()
 
     local HttpService = game:GetService("HttpService")
     local TeleportService = game:GetService("TeleportService")
     local PlaceId = game.PlaceId
 
-    local cursor = ""
-    local found = false
-
-    for i = 1, 5 do
-        local url = "https://roproxy.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
-
-        if cursor ~= "" then
-            url = url .. "&cursor=" .. cursor
-        end
-
+    -- Spam liên tục cho đến khi teleport thành công
+    while _G.AutoCyborg do
         local success, result = pcall(function()
-            return HttpService:JSONDecode(game:HttpGet(url))
+            return HttpService:JSONDecode(
+                game:HttpGet(
+                    "http://api.visionx.x10.mx:21716/finder?type=LEGENDARY_SWORD&api_key=VISIONX_kunBEZRBTa"
+                )
+            )
         end)
 
-        if success and result and result.data then
-            for _, server in ipairs(result.data) do
-                if server.playing < server.maxPlayers
-                and server.id ~= game.JobId
-                and server.playing > 0
-                and not visitedServers[server.id] then
+        if success and result then
+            local serverId = result.serverId or result.id or result.jobId
 
-                    visitedServers[server.id] = true
-                    print("Hop tới:", server.id)
+            if serverId and serverId ~= game.JobId and not visitedServers[serverId] then
+                visitedServers[serverId] = true
+                print("[VxezeHub] Hop tới server:", serverId)
 
-                    pcall(function()
-                        TeleportService:TeleportToPlaceInstance(PlaceId, server.id, player)
-                    end)
+                local ok = pcall(function()
+                    TeleportService:TeleportToPlaceInstance(PlaceId, serverId, player)
+                end)
 
-                    task.wait(3)
-                    found = true
+                if ok then
+                    task.wait(5) -- chờ teleport xử lý, tránh lỗi 773
                     break
                 end
             end
-
-            if found then break end
-
-            cursor = result.nextPageCursor or ""
-            if cursor == "" then break end
-        else
-            task.wait(2)
         end
-    end
 
-    if not found then
-        task.wait(2)
-        TeleportService:Teleport(PlaceId, player)
+        task.wait(1) -- delay nhỏ tránh throttle
     end
 end
 
