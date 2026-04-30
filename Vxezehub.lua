@@ -4,12 +4,12 @@ local Library = loadstring(game:HttpGet(
 
 local player = game.Players.LocalPlayer
 
--- 🔥 ĐỔI ID LOGO Ở ĐÂY
+-- 🔥 THAY ID LOGO Ở ĐÂY
 local LOGO = "rbxassetid://PUT_YOUR_ID_HERE"
 
 local Window = Library:Window({
-    Title      = "vxeze hub",
-    SubTitle   = "by Senpai",
+    Title      = "Vxeze Hub",
+    SubTitle   = "Game: BloxKid",
     ToggleKey  = Enum.KeyCode.RightControl,
     Icon       = LOGO,
     ToggleIcon = LOGO,
@@ -18,8 +18,8 @@ local Window = Library:Window({
     Scale      = 1.2,
 })
 
-Library:SetExtraTitle("vxeze")
-Library:SetExtraSubTitle("Senpai")
+Library:SetExtraTitle("By Senpai")
+Library:SetExtraSubTitle("VxezeStudio")
 
 local Main = Window:NewPage({
     Title = "Main",
@@ -30,7 +30,7 @@ local Main = Window:NewPage({
 Main:Section("Main Features")
 
 -- =========================
--- AUTO CYBORG + FIX HOP
+-- AUTO CYBORG
 -- =========================
 
 _G = {
@@ -44,6 +44,7 @@ local visitedServers = {}
 visitedServers[game.JobId] = true
 
 local UIS = game:GetService("UserInputService")
+
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
     if input.KeyCode == Enum.KeyCode.RightControl then
@@ -62,6 +63,9 @@ task.spawn(function()
     end
 end)
 
+-- =========================
+-- TWEEN
+-- =========================
 function TweenTo(cf)
     local char = player.Character
     if not char then return end
@@ -103,6 +107,9 @@ function TweenTo(cf)
     return tween
 end
 
+-- =========================
+-- FIND CHEST
+-- =========================
 function GetRealChest()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
@@ -126,44 +133,46 @@ function GetRealChest()
     return target
 end
 
--- 🔥 HOP SERVER FIX
+-- =========================
+-- 🔥 HOP SERVER (FIX CHUẨN)
+-- =========================
 function HopServer()
     VisitedChests = {}
 
-    local Http = game:GetService("HttpService")
-    local TPS = game:GetService("TeleportService")
-
+    local HttpService = game:GetService("HttpService")
+    local TeleportService = game:GetService("TeleportService")
     local PlaceId = game.PlaceId
-    local JobId = game.JobId
 
     local cursor = ""
     local found = false
 
     for i = 1, 5 do
-        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+        local url = "https://roproxy.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
 
         if cursor ~= "" then
             url = url .. "&cursor=" .. cursor
         end
 
         local success, result = pcall(function()
-            return Http:JSONDecode(game:HttpGet(url))
+            return HttpService:JSONDecode(game:HttpGet(url))
         end)
 
         if success and result and result.data then
-            for _, server in pairs(result.data) do
-                if server.id ~= JobId
-                and server.playing < server.maxPlayers
+            for _, server in ipairs(result.data) do
+                if server.playing < server.maxPlayers
+                and server.id ~= game.JobId
+                and server.playing > 0
                 and not visitedServers[server.id] then
 
                     visitedServers[server.id] = true
-                    found = true
+                    print("Hop tới:", server.id)
 
                     pcall(function()
-                        TPS:TeleportToPlaceInstance(PlaceId, server.id, player)
+                        TeleportService:TeleportToPlaceInstance(PlaceId, server.id, player)
                     end)
 
                     task.wait(3)
+                    found = true
                     break
                 end
             end
@@ -179,12 +188,13 @@ function HopServer()
 
     if not found then
         task.wait(2)
-        pcall(function()
-            TPS:Teleport(PlaceId, player)
-        end)
+        TeleportService:Teleport(PlaceId, player)
     end
 end
 
+-- =========================
+-- MAIN LOGIC
+-- =========================
 function MainLogic()
     repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
@@ -251,6 +261,9 @@ function MainLogic()
     end
 end
 
+-- =========================
+-- UI TOGGLE
+-- =========================
 Main:Toggle({
     Title = "Auto Cyborg (Tween Fast)",
     Value = false,
