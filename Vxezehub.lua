@@ -4,16 +4,23 @@ local Library = loadstring(game:HttpGet(
 
 local player = game.Players.LocalPlayer
 
+-- 🔥 ĐỔI ID LOGO Ở ĐÂY
+local LOGO = "rbxassetid://PUT_YOUR_ID_HERE"
+
 local Window = Library:Window({
-    Title      = "My Script",
-    SubTitle   = "Main",
+    Title      = "vxeze hub",
+    SubTitle   = "by Senpai",
     ToggleKey  = Enum.KeyCode.RightControl,
-    FolderName = "MyScript",
+    Icon       = LOGO,
+    ToggleIcon = LOGO,
+    FolderName = "vxezeHub",
     AutoScale  = true,
     Scale      = 1.2,
 })
 
--- TAB MAIN
+Library:SetExtraTitle("vxeze")
+Library:SetExtraSubTitle("Senpai")
+
 local Main = Window:NewPage({
     Title = "Main",
     Desc  = "Main functions",
@@ -23,7 +30,7 @@ local Main = Window:NewPage({
 Main:Section("Main Features")
 
 -- =========================
--- CODE AUTO CYBORG (NGUYÊN)
+-- AUTO CYBORG + FIX HOP
 -- =========================
 
 _G = {
@@ -33,8 +40,9 @@ _G = {
 }
 
 local VisitedChests = {}
+local visitedServers = {}
+visitedServers[game.JobId] = true
 
--- FIX INPUT (GIỮ NGUYÊN NHƯ BẠN)
 local UIS = game:GetService("UserInputService")
 UIS.InputBegan:Connect(function(input, gpe)
     if gpe then return end
@@ -45,7 +53,6 @@ UIS.InputBegan:Connect(function(input, gpe)
     end
 end)
 
--- giữ chuột
 task.spawn(function()
     while true do
         task.wait(1)
@@ -55,7 +62,6 @@ task.spawn(function()
     end
 end)
 
--- TWEEN
 function TweenTo(cf)
     local char = player.Character
     if not char then return end
@@ -97,7 +103,6 @@ function TweenTo(cf)
     return tween
 end
 
--- FIND CHEST
 function GetRealChest()
     local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
@@ -121,30 +126,65 @@ function GetRealChest()
     return target
 end
 
--- HOP SERVER
+-- 🔥 HOP SERVER FIX
 function HopServer()
     VisitedChests = {}
 
+    local Http = game:GetService("HttpService")
     local TPS = game:GetService("TeleportService")
-    local Api = "https://games.roblox.com/v1/games/"..game.PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
 
-    local s, r = pcall(function()
-        return game:GetService("HttpService"):JSONDecode(game:HttpGet(Api))
-    end)
+    local PlaceId = game.PlaceId
+    local JobId = game.JobId
 
-    if s and r.data then
-        for _, v in pairs(r.data) do
-            if v.playing < v.maxPlayers and v.id ~= game.JobId then
-                TPS:TeleportToPlaceInstance(game.PlaceId, v.id, player)
-                return
+    local cursor = ""
+    local found = false
+
+    for i = 1, 5 do
+        local url = "https://games.roblox.com/v1/games/"..PlaceId.."/servers/Public?sortOrder=Asc&limit=100"
+
+        if cursor ~= "" then
+            url = url .. "&cursor=" .. cursor
+        end
+
+        local success, result = pcall(function()
+            return Http:JSONDecode(game:HttpGet(url))
+        end)
+
+        if success and result and result.data then
+            for _, server in pairs(result.data) do
+                if server.id ~= JobId
+                and server.playing < server.maxPlayers
+                and not visitedServers[server.id] then
+
+                    visitedServers[server.id] = true
+                    found = true
+
+                    pcall(function()
+                        TPS:TeleportToPlaceInstance(PlaceId, server.id, player)
+                    end)
+
+                    task.wait(3)
+                    break
+                end
             end
+
+            if found then break end
+
+            cursor = result.nextPageCursor or ""
+            if cursor == "" then break end
+        else
+            task.wait(2)
         end
     end
 
-    TPS:Teleport(game.PlaceId, player)
+    if not found then
+        task.wait(2)
+        pcall(function()
+            TPS:Teleport(PlaceId, player)
+        end)
+    end
 end
 
--- MAIN LOGIC
 function MainLogic()
     repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
 
@@ -203,16 +243,13 @@ function MainLogic()
             task.wait(5)
 
             if retry >= 5 then
+                task.wait(2)
                 HopServer()
                 break
             end
         end
     end
 end
-
--- =========================
--- UI TOGGLE (ĐÃ GẮN)
--- =========================
 
 Main:Toggle({
     Title = "Auto Cyborg (Tween Fast)",
