@@ -1,7 +1,6 @@
 -- LocalScript: đặt trong StarterPlayerScripts
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
@@ -42,14 +41,13 @@ stroke.Color = Color3.fromRGB(70, 140, 255)
 stroke.Transparency = 0.7
 stroke.Thickness = 1.2
 
--- Crystal
+-- Crystal / Avatar image (ID của bạn)
 local crystal = Instance.new("ImageLabel")
 crystal.AnchorPoint = Vector2.new(0.5, 0.5)
 crystal.Size = UDim2.new(0, 100, 0, 100)
 crystal.Position = UDim2.new(0.5, 0, 0, 62)
 crystal.BackgroundTransparency = 1
-crystal.Image = "rbxassetid://18716558902"
-crystal.ImageColor3 = Color3.fromRGB(120, 190, 255)
+crystal.Image = "rbxassetid://83581831707784"
 crystal.ScaleType = Enum.ScaleType.Fit
 crystal.Parent = panel
 
@@ -101,8 +99,7 @@ layout.FillDirection = Enum.FillDirection.Vertical
 layout.Padding = UDim.new(0, 8)
 layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
--- Tạo từng dòng stat, trả về valLabel để update
-local function makeStat(icon, label, initVal, color)
+local function makeStat(icon, label, color)
     local row = Instance.new("Frame")
     row.Size = UDim2.new(1, 0, 0, 22)
     row.BackgroundTransparency = 1
@@ -134,7 +131,7 @@ local function makeStat(icon, label, initVal, color)
     valLabel.Size = UDim2.new(0.4, 0, 1, 0)
     valLabel.Position = UDim2.new(0.6, 0, 0, 0)
     valLabel.BackgroundTransparency = 1
-    valLabel.Text = initVal
+    valLabel.Text = "0"
     valLabel.TextColor3 = color
     valLabel.Font = Enum.Font.GothamBold
     valLabel.TextSize = 13
@@ -144,44 +141,47 @@ local function makeStat(icon, label, initVal, color)
     return valLabel
 end
 
-local levelVal     = makeStat("⚔", "Level",     "Scanning...", Color3.fromRGB(255, 220, 80))
-local fragVal      = makeStat("💎", "Fragments", "Scanning...", Color3.fromRGB(100, 210, 255))
-local beliVal      = makeStat("💰", "Beli",      "Scanning...", Color3.fromRGB(100, 255, 160))
+local levelVal = makeStat("⚔", "Level",     Color3.fromRGB(255, 220, 80))
+local fragVal  = makeStat("💎", "Fragments", Color3.fromRGB(100, 210, 255))
+local beliVal  = makeStat("💰", "Beli",      Color3.fromRGB(100, 255, 160))
 
--- Format số đẹp: 1200000 → 1.2M
+-- Format số
 local function formatNum(n)
-    if n >= 1e9 then
-        return string.format("%.1fB", n / 1e9)
-    elseif n >= 1e6 then
-        return string.format("%.1fM", n / 1e6)
-    elseif n >= 1e3 then
-        return string.format("%.1fK", n / 1e3)
-    else
-        return tostring(math.floor(n))
-    end
+    if n >= 1e9 then return string.format("%.1fB", n/1e9)
+    elseif n >= 1e6 then return string.format("%.1fM", n/1e6)
+    elseif n >= 1e3 then return string.format("%.1fK", n/1e3)
+    else return tostring(math.floor(n)) end
 end
 
--- Hàm quét dữ liệu từ leaderstats / stats của game
+-- CountUp animation
+local function countUp(label, fromVal, toVal, duration, isLevel)
+    task.spawn(function()
+        local steps = 40
+        local interval = duration / steps
+        local diff = toVal - fromVal
+        for i = 1, steps do
+            local current = math.floor(fromVal + (diff * (i / steps)))
+            label.Text = isLevel and tostring(current) or formatNum(current)
+            task.wait(interval)
+        end
+        label.Text = isLevel and tostring(math.floor(toVal)) or formatNum(toVal)
+    end)
+end
+
+-- Quét stats
 local function scanStats()
-    local char = player.Character
-    local leaderstats = player:FindFirstChild("leaderstats")
-    local data = player:FindFirstChild("Data") or player:FindFirstChild("PlayerData") or player:FindFirstChild("stats")
-
     local level, fragments, beli = nil, nil, nil
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local data = player:FindFirstChild("Data")
+             or player:FindFirstChild("PlayerData")
+             or player:FindFirstChild("stats")
 
-    -- Quét Level
     if leaderstats then
-        local lv = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("level")
-                or leaderstats:FindFirstChild("Lvl")   or leaderstats:FindFirstChild("lvl")
+        local lv = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("level") or leaderstats:FindFirstChild("Lvl")
         if lv then level = lv.Value end
-
-        local fr = leaderstats:FindFirstChild("Fragments") or leaderstats:FindFirstChild("fragments")
-                or leaderstats:FindFirstChild("Fragment")  or leaderstats:FindFirstChild("F")
+        local fr = leaderstats:FindFirstChild("Fragments") or leaderstats:FindFirstChild("Fragment") or leaderstats:FindFirstChild("F")
         if fr then fragments = fr.Value end
-
-        local bl = leaderstats:FindFirstChild("Beli") or leaderstats:FindFirstChild("beli")
-                or leaderstats:FindFirstChild("Berries") or leaderstats:FindFirstChild("Money")
-                or leaderstats:FindFirstChild("Cash")
+        local bl = leaderstats:FindFirstChild("Beli") or leaderstats:FindFirstChild("Berries") or leaderstats:FindFirstChild("Money")
         if bl then beli = bl.Value end
     end
 
@@ -200,20 +200,13 @@ local function scanStats()
         end
     end
 
-    -- Fallback: quét toàn bộ player children
     if not level or not fragments or not beli then
         for _, child in ipairs(player:GetChildren()) do
             for _, val in ipairs(child:GetChildren()) do
                 local n = val.Name:lower()
-                if not level and (n == "level" or n == "lvl") and val:IsA("IntValue") or val:IsA("NumberValue") then
-                    level = val.Value
-                end
-                if not fragments and (n == "fragments" or n == "fragment" or n == "f") and (val:IsA("IntValue") or val:IsA("NumberValue")) then
-                    fragments = val.Value
-                end
-                if not beli and (n == "beli" or n == "berries" or n == "money" or n == "cash") and (val:IsA("IntValue") or val:IsA("NumberValue")) then
-                    beli = val.Value
-                end
+                if not level and (n=="level" or n=="lvl") and (val:IsA("IntValue") or val:IsA("NumberValue")) then level = val.Value end
+                if not fragments and (n=="fragments" or n=="fragment" or n=="f") and (val:IsA("IntValue") or val:IsA("NumberValue")) then fragments = val.Value end
+                if not beli and (n=="beli" or n=="berries" or n=="money" or n=="cash") and (val:IsA("IntValue") or val:IsA("NumberValue")) then beli = val.Value end
             end
         end
     end
@@ -221,12 +214,12 @@ local function scanStats()
     return level, fragments, beli
 end
 
+local currentLevel, currentFrag, currentBeli = 0, 0, 0
+
 -- === ANIMATIONS ===
 local tweenInfo = TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-
 TweenService:Create(overlay, tweenInfo, {BackgroundTransparency = 0.15}):Play()
 TweenService:Create(blur,    tweenInfo, {Size = 14}):Play()
-
 panel.Size = UDim2.new(0, 310, 0, 280)
 TweenService:Create(panel, tweenInfo, {
     BackgroundTransparency = 0.25,
@@ -237,65 +230,75 @@ TweenService:Create(panel, tweenInfo, {
 local function floatLoop()
     local up = TweenService:Create(crystal,
         TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-        {Position = UDim2.new(0.5, 0, 0, 54)}
-    )
+        {Position = UDim2.new(0.5, 0, 0, 54)})
     local down = TweenService:Create(crystal,
         TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-        {Position = UDim2.new(0.5, 0, 0, 70)}
-    )
+        {Position = UDim2.new(0.5, 0, 0, 70)})
     up:Play()
     up.Completed:Connect(function()
         down:Play()
         down.Completed:Connect(floatLoop)
     end)
 end
-
 floatLoop()
 
--- Loading dots animation + scan liên tục
+-- Loading + scan
 local dots = {"Loading.", "Loading..", "Loading..."}
 local idx = 1
 local loadingDone = false
-local SCAN_INTERVAL = 0.5 -- quét mỗi 0.5 giây
 
 task.spawn(function()
-    -- Chạy loading 2 giây trước
     local timer = 0
     while timer < 2 do
         loading.Text = dots[idx]
         idx = (idx % #dots) + 1
-        task.wait(SCAN_INTERVAL)
-        timer = timer + SCAN_INTERVAL
+        task.wait(0.5)
+        timer = timer + 0.5
     end
 
-    -- Quét lần đầu xong → ẩn loading, hiện stats
     local lv, fr, bl = scanStats()
-    levelVal.Text = lv and formatNum(lv) or "N/A"
-    fragVal.Text  = fr and formatNum(fr) or "N/A"
-    beliVal.Text  = bl and formatNum(bl) or "N/A"
+    lv = lv or 0
+    fr = fr or 0
+    bl = bl or 0
 
-    -- Ẩn loading, hiện stats mượt
     TweenService:Create(loading, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
     task.wait(0.4)
     loading.Visible = false
     divider.Visible = true
     statsFrame.Visible = true
-
-    -- Fade in stats
-    statsFrame.GroupTransparency = 1
     TweenService:Create(statsFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {GroupTransparency = 0}):Play()
 
-    loadingDone = true
+    countUp(levelVal, 0, lv, 1.2, true)
+    countUp(fragVal,  0, fr, 1.5, false)
+    countUp(beliVal,  0, bl, 1.8, false)
+
+    currentLevel = lv
+    currentFrag  = fr
+    currentBeli  = bl
+    loadingDone  = true
 end)
 
--- Quét liên tục sau khi loading xong
+-- Quét liên tục
 task.spawn(function()
     while not loadingDone do task.wait(0.1) end
     while true do
-        task.wait(SCAN_INTERVAL)
+        task.wait(0.5)
         local lv, fr, bl = scanStats()
-        if lv then levelVal.Text = formatNum(lv) end
-        if fr then fragVal.Text  = formatNum(fr) end
-        if bl then beliVal.Text  = formatNum(bl) end
+        lv = lv or currentLevel
+        fr = fr or currentFrag
+        bl = bl or currentBeli
+
+        if lv ~= currentLevel then
+            countUp(levelVal, currentLevel, lv, 0.6, true)
+            currentLevel = lv
+        end
+        if fr ~= currentFrag then
+            countUp(fragVal, currentFrag, fr, 0.6, false)
+            currentFrag = fr
+        end
+        if bl ~= currentBeli then
+            countUp(beliVal, currentBeli, bl, 0.6, false)
+            currentBeli = bl
+        end
     end
 end)
