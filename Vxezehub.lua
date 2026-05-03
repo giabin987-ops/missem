@@ -1,302 +1,138 @@
-local Library = loadstring(game:HttpGet(
-    "https://raw.githubusercontent.com/ArchIsDead/vita-ui-modified/refs/heads/main/source.lua"
-))()
+-- LocalScript: đặt trong StarterPlayerScripts
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local player = game.Players.LocalPlayer
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CrystalDisplayUI"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
 
--- 🔥 THAY ID LOGO Ở ĐÂY
-local LOGO = "rbxassetid://PUT_YOUR_ID_HERE"
+-- Overlay
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(8, 12, 30)
+overlay.BackgroundTransparency = 1
+overlay.BorderSizePixel = 0
+overlay.Parent = screenGui
 
-local Window = Library:Window({
-    Title      = "Vxeze Hub",
-    SubTitle   = "Game: BloxKid",
-    ToggleKey  = Enum.KeyCode.RightControl,
-    Icon       = LOGO,
-    ToggleIcon = LOGO,
-    FolderName = "vxezeHub",
-    AutoScale  = true,
-    Scale      = 1.2,
-})
+-- Blur
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = game:GetService("Lighting")
 
-Library:SetExtraTitle("By Senpai")
-Library:SetExtraSubTitle("VxezeStudio")
+-- Panel
+local panel = Instance.new("Frame")
+panel.AnchorPoint = Vector2.new(0.5, 0.5)
+panel.Size = UDim2.new(0, 360, 0, 260)
+panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+panel.BackgroundColor3 = Color3.fromRGB(10, 20, 52)
+panel.BackgroundTransparency = 1
+panel.BorderSizePixel = 0
+panel.Parent = overlay
 
-local Main = Window:NewPage({
-    Title = "Main",
-    Desc  = "Main functions",
-    Icon  = "home",
-})
+Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 20)
 
-Main:Section("Main Features")
+local stroke = Instance.new("UIStroke", panel)
+stroke.Color = Color3.fromRGB(70, 140, 255)
+stroke.Transparency = 0.7
+stroke.Thickness = 1.2
 
--- =========================
--- AUTO CYBORG
--- =========================
+-- Crystal ImageLabel (thay ID nếu có ảnh riêng)
+local crystal = Instance.new("ImageLabel")
+crystal.AnchorPoint = Vector2.new(0.5, 0.5)
+crystal.Size = UDim2.new(0, 110, 0, 110)
+crystal.Position = UDim2.new(0.5, 0, 0, 70)
+crystal.BackgroundTransparency = 1
+crystal.Image = "rbxassetid://18716558902" -- blue gem asset
+crystal.ImageColor3 = Color3.fromRGB(120, 190, 255)
+crystal.ScaleType = Enum.ScaleType.Fit
+crystal.Parent = panel
 
-_G = {
-    AutoCyborg = false,
-    TweenSpeed = 300,
-    CurrentTween = nil
-}
+-- Glow dưới crystal
+local glow = Instance.new("ImageLabel")
+glow.AnchorPoint = Vector2.new(0.5, 0.5)
+glow.Size = UDim2.new(0, 160, 0, 80)
+glow.Position = UDim2.new(0.5, 0, 0, 120)
+glow.BackgroundTransparency = 1
+glow.Image = "rbxasset://textures/ui/TopBar/chatOff.png"
+glow.ImageColor3 = Color3.fromRGB(60, 130, 255)
+glow.ImageTransparency = 0.6
+glow.Parent = panel
 
-local VisitedChests = {}
-local visitedServers = {}
-visitedServers[game.JobId] = true
+-- Title
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, -24, 0, 20)
+title.Position = UDim2.new(0, 12, 0, 145)
+title.BackgroundTransparency = 1
+title.Text = "DISPLAY ONLY — NO ACTION TAKEN"
+title.TextColor3 = Color3.fromRGB(100, 165, 255)
+title.TextTransparency = 0.3
+title.Font = Enum.Font.GothamBold
+title.TextSize = 10
+title.TextXAlignment = Enum.TextXAlignment.Center
+title.Parent = panel
 
-local UIS = game:GetService("UserInputService")
+-- Main text
+local main = Instance.new("TextLabel")
+main.Size = UDim2.new(1, -24, 0, 30)
+main.Position = UDim2.new(0, 12, 0, 170)
+main.BackgroundTransparency = 1
+main.Text = "Visual Presentation Mode"
+main.TextColor3 = Color3.fromRGB(220, 238, 255)
+main.Font = Enum.Font.GothamBold
+main.TextSize = 20
+main.TextXAlignment = Enum.TextXAlignment.Center
+main.Parent = panel
 
-UIS.InputBegan:Connect(function(input, gpe)
-    if gpe then return end
-    if input.KeyCode == Enum.KeyCode.RightControl then
-        pcall(function()
-            Window:ToggleMinimize()
-        end)
-    end
-end)
+-- Sub text
+local sub = Instance.new("TextLabel")
+sub.Size = UDim2.new(1, -32, 0, 36)
+sub.Position = UDim2.new(0, 16, 0, 205)
+sub.BackgroundTransparency = 1
+sub.Text = "This screen is decorative and does not affect gameplay."
+sub.TextColor3 = Color3.fromRGB(160, 200, 255)
+sub.TextTransparency = 0.4
+sub.Font = Enum.Font.Gotham
+sub.TextSize = 12
+sub.TextWrapped = true
+sub.TextXAlignment = Enum.TextXAlignment.Center
+sub.Parent = panel
 
-task.spawn(function()
-    while true do
-        task.wait(1)
-        pcall(function()
-            UIS.MouseIconEnabled = true
-        end)
-    end
-end)
+-- === ANIMATIONS ===
+local tweenInfo = TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 
--- =========================
--- THÔNG BÁO MÀN HÌNH
--- =========================
-function ShowHopNotification()
-    pcall(function()
-        -- Xoá thông báo cũ nếu còn
-        local existing = game:GetService("CoreGui"):FindFirstChild("HopNotif")
-        if existing then existing:Destroy() end
+-- Fade in overlay
+TweenService:Create(overlay, tweenInfo, {BackgroundTransparency = 0.15}):Play()
 
-        local screenGui = Instance.new("ScreenGui")
-        screenGui.Name = "HopNotif"
-        screenGui.ResetOnSpawn = false
-        screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+-- Blur tăng dần
+TweenService:Create(blur, tweenInfo, {Size = 14}):Play()
 
-        local frame = Instance.new("Frame", screenGui)
-        frame.Size = UDim2.new(0, 400, 0, 60)
-        frame.Position = UDim2.new(0.5, -200, 0.1, 0)
-        frame.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-        frame.BorderSizePixel = 0
-        Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 10)
+-- Panel fade in
+TweenService:Create(panel, tweenInfo, {BackgroundTransparency = 0.25}):Play()
 
-        local label = Instance.new("TextLabel", frame)
-        label.Size = UDim2.new(1, 0, 1, 0)
-        label.BackgroundTransparency = 1
-        label.Text = "VxezeHub Hop Server!"
-        label.TextColor3 = Color3.fromRGB(255, 255, 255)
-        label.TextScaled = true
-        label.Font = Enum.Font.GothamBold
+-- Panel scale từ nhỏ ra (zoom-in)
+panel.Size = UDim2.new(0, 300, 0, 220)
+TweenService:Create(panel, tweenInfo, {Size = UDim2.new(0, 360, 0, 260)}):Play()
 
-        screenGui.Parent = game:GetService("CoreGui")
-
-        task.delay(3, function()
-            pcall(function() screenGui:Destroy() end)
-        end)
-    end)
-end
-
--- =========================
--- TWEEN
--- =========================
-function TweenTo(cf)
-    local char = player.Character
-    if not char then return end
-
-    local root = char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
-
-    if _G.CurrentTween then
-        _G.CurrentTween:Cancel()
-    end
-
-    local dist = (cf.Position - root.Position).Magnitude
-
-    if dist < 300 then
-        root.CFrame = cf
-        return
-    end
-
-    local tween = game:GetService("TweenService"):Create(
-        root,
-        TweenInfo.new(dist / _G.TweenSpeed, Enum.EasingStyle.Linear),
-        {CFrame = cf}
+-- Float crystal lên xuống
+local function floatLoop()
+    local up = TweenService:Create(crystal,
+        TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+        {Position = UDim2.new(0.5, 0, 0, 60)}
     )
-
-    _G.CurrentTween = tween
-    tween:Play()
-
-    task.spawn(function()
-        while tween and tween.PlaybackState == Enum.PlaybackState.Playing do
-            for _, v in pairs(char:GetDescendants()) do
-                if v:IsA("BasePart") then
-                    v.CanCollide = false
-                end
-            end
-            task.wait()
-        end
+    local down = TweenService:Create(crystal,
+        TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+        {Position = UDim2.new(0.5, 0, 0, 78)}
+    )
+    up:Play()
+    up.Completed:Connect(function()
+        down:Play()
+        down.Completed:Connect(floatLoop)
     end)
-
-    return tween
 end
 
--- =========================
--- FIND CHEST
--- =========================
-function GetRealChest()
-    local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if not root then return nil end
-
-    local target, distMin = nil, math.huge
-
-    for _, v in ipairs(workspace:GetDescendants()) do
-        if v:IsA("BasePart")
-        and string.find(v.Name, "Chest")
-        and v:FindFirstChild("TouchInterest")
-        and not VisitedChests[v] then
-
-            local dist = (v.Position - root.Position).Magnitude
-            if dist < distMin then
-                distMin = dist
-                target = v
-            end
-        end
-    end
-
-    return target
-end
-
--- =========================
--- 🔥 HOP SERVER (API + SPAM, TRÁNH LỖI 773)
--- =========================
-function HopServer()
-    VisitedChests = {}
-
-    ShowHopNotification()
-
-    local HttpService = game:GetService("HttpService")
-    local TeleportService = game:GetService("TeleportService")
-    local PlaceId = game.PlaceId
-
-    -- Spam liên tục cho đến khi teleport thành công
-    while _G.AutoCyborg do
-        local success, result = pcall(function()
-            return HttpService:JSONDecode(
-                game:HttpGet(
-                    "http://api.visionx.x10.mx:21716/finder?type=LEGENDARY_SWORD&api_key=VISIONX_kunBEZRBTa"
-                )
-            )
-        end)
-
-        if success and result then
-            local serverId = result.serverId or result.id or result.jobId
-
-            if serverId and serverId ~= game.JobId and not visitedServers[serverId] then
-                visitedServers[serverId] = true
-                print("[VxezeHub] Hop tới server:", serverId)
-
-                local ok = pcall(function()
-                    TeleportService:TeleportToPlaceInstance(PlaceId, serverId, player)
-                end)
-
-                if ok then
-                    task.wait(5) -- chờ teleport xử lý, tránh lỗi 773
-                    break
-                end
-            end
-        end
-
-        task.wait(1) -- delay nhỏ tránh throttle
-    end
-end
-
--- =========================
--- MAIN LOGIC
--- =========================
-function MainLogic()
-    repeat task.wait() until player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-
-    local retry = 0
-
-    while _G.AutoCyborg do
-        task.wait(0.1)
-
-        local char = player.Character
-        local root = char and char:FindFirstChild("HumanoidRootPart")
-        if not root then continue end
-
-        local Fist = char:FindFirstChild("Fist of Darkness")
-            or player.Backpack:FindFirstChild("Fist of Darkness")
-
-        if Fist then
-            if _G.CurrentTween then _G.CurrentTween:Cancel() end
-
-            local t1 = TweenTo(CFrame.new(-6473, 250, -4493))
-            if t1 then t1.Completed:Wait() end
-
-            pcall(function()
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("BuyMicrochip")
-            end)
-
-            task.wait(0.3)
-
-            local t2 = TweenTo(CFrame.new(-6475, 250, -4490))
-            if t2 then t2.Completed:Wait() end
-
-            pcall(function()
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("StartRaid")
-            end)
-
-            break
-        end
-
-        local chest = GetRealChest()
-
-        if chest then
-            retry = 0
-
-            local tw = TweenTo(chest.CFrame + Vector3.new(0,3,0))
-            if tw then tw.Completed:Wait() end
-
-            for i = 1,3 do
-                firetouchinterest(root, chest, 0)
-                firetouchinterest(root, chest, 1)
-                task.wait(0.1)
-            end
-
-            VisitedChests[chest] = true
-
-        else
-            retry += 1
-            task.wait(5)
-
-            if retry >= 5 then
-                task.wait(2)
-                HopServer()
-                break
-            end
-        end
-    end
-end
-
--- =========================
--- UI TOGGLE
--- =========================
-Main:Toggle({
-    Title = "Auto Cyborg (Tween Fast)",
-    Value = false,
-    Callback = function(v)
-        _G.AutoCyborg = v
-        if v then
-            task.spawn(MainLogic)
-        else
-            if _G.CurrentTween then
-                _G.CurrentTween:Cancel()
-            end
-        end
-    end
-})
+floatLoop()
