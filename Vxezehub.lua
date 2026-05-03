@@ -45,7 +45,7 @@ stroke.Thickness = 1.2
 -- Crystal
 local crystal = Instance.new("ImageLabel")
 crystal.AnchorPoint = Vector2.new(0.5, 0.5)
-crystal.Size = UDim2.new(0, 165, 0, 165)
+crystal.Size = UDim2.new(0, 175, 0, 175)
 crystal.Position = UDim2.new(0.5, 0, 0, 62)
 crystal.BackgroundTransparency = 1
 crystal.Image = "rbxassetid://83581831707784"
