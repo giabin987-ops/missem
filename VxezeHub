@@ -1,298 +1,301 @@
-local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
+-- LocalScript: đặt trong StarterPlayerScripts
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
 
-local Window = Fluent:CreateWindow({
-    Title = "Vxeze Hub",
-    SubTitle = "By Senpai | ZOO or OOF",
-    TabWidth = 160,
-    Size = UDim2.fromOffset(560, 440),
-    Acrylic = true,
-    Theme = "Dark"
-})
+-- ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CrystalDisplayUI"
+screenGui.ResetOnSpawn = false
+screenGui.IgnoreGuiInset = true
+screenGui.Parent = playerGui
 
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    ESP = Window:AddTab({ Title = "ESP", Icon = "view" })
-}
+-- Overlay
+local overlay = Instance.new("Frame")
+overlay.Size = UDim2.new(1, 0, 1, 0)
+overlay.BackgroundColor3 = Color3.fromRGB(8, 12, 30)
+overlay.BackgroundTransparency = 1
+overlay.BorderSizePixel = 0
+overlay.Parent = screenGui
 
--- [ BIẾN ĐIỀU KHIỂN ]
-local ESP_Animals = false
-local ESP_Boss = false
-local WalkSpeed_Val = 16
-local InfJump = false
-local Noclip = false
-local AutoWin_Animal = false
-local AutoWin_Seeker = false
-local AntiAFK = false
+-- Blur
+local blur = Instance.new("BlurEffect")
+blur.Size = 0
+blur.Parent = game:GetService("Lighting")
 
-----------------------------------------------------------------
--- [ TAB MAIN ]
-----------------------------------------------------------------
-Tabs.Main:AddSection("Chức năng Auto")
+-- Panel
+local panel = Instance.new("Frame")
+panel.AnchorPoint = Vector2.new(0.5, 0.5)
+panel.Size = UDim2.new(0, 370, 0, 330)
+panel.Position = UDim2.new(0.5, 0, 0.5, 0)
+panel.BackgroundColor3 = Color3.fromRGB(10, 20, 52)
+panel.BackgroundTransparency = 1
+panel.BorderSizePixel = 0
+panel.Parent = overlay
 
-Tabs.Main:AddToggle("AutoWinAnimalToggle", {
-    Title = "Auto Win (Động vật)",
-    Description = "Bay lên trời cao (không bị bắn)",
-    Default = false,
-    Callback = function(v) AutoWin_Animal = v end
-})
+Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 20)
 
-Tabs.Main:AddToggle("AutoWinSeekerToggle", {
-    Title = "Auto Win (Người bắn / Seeker)",
-    Description = "Tele dính vào người + Aim + Bắn liên tục (auto kill)",
-    Default = false,
-    Callback = function(v) AutoWin_Seeker = v end
-})
+local stroke = Instance.new("UIStroke", panel)
+stroke.Color = Color3.fromRGB(70, 140, 255)
+stroke.Transparency = 0.7
+stroke.Thickness = 1.2
 
-Tabs.Main:AddToggle("AntiAFKToggle", {
-    Title = "Anti-AFK",
-    Description = "Ngăn bị kick khi đứng yên",
-    Default = false,
-    Callback = function(v) AntiAFK = v end
-})
+-- Crystal
+local crystal = Instance.new("ImageLabel")
+crystal.AnchorPoint = Vector2.new(0.5, 0.5)
+crystal.Size = UDim2.new(0, 150, 0, 150)
+crystal.Position = UDim2.new(0.5, 0, 0, 62)
+crystal.BackgroundTransparency = 1
+crystal.Image = "rbxassetid://83581831707784"
+crystal.ImageColor3 = Color3.fromRGB(120, 190, 255)
+crystal.ScaleType = Enum.ScaleType.Fit
+crystal.Parent = panel
 
-Tabs.Main:AddSection("Hỗ trợ di chuyển")
+-- Vxeze Hub
+local main = Instance.new("TextLabel")
+main.Size = UDim2.new(1, -24, 0, 34)
+main.Position = UDim2.new(0, 12, 0, 128)
+main.BackgroundTransparency = 1
+main.Text = "Vxeze Hub"
+main.TextColor3 = Color3.fromRGB(80, 200, 255)
+main.Font = Enum.Font.GothamBold
+main.TextSize = 26
+main.TextXAlignment = Enum.TextXAlignment.Center
+main.Parent = panel
 
-Tabs.Main:AddSlider("SpeedSlider", {
-    Title = "Tốc độ chạy",
-    Default = 16, Min = 16, Max = 200, Rounding = 1,
-    Callback = function(v) WalkSpeed_Val = v end
-})
+-- Loading label
+local loading = Instance.new("TextLabel")
+loading.Size = UDim2.new(1, -24, 0, 22)
+loading.Position = UDim2.new(0, 12, 0, 166)
+loading.BackgroundTransparency = 1
+loading.Text = "Loading..."
+loading.TextColor3 = Color3.fromRGB(200, 220, 255)
+loading.TextTransparency = 0.2
+loading.Font = Enum.Font.Gotham
+loading.TextSize = 14
+loading.TextXAlignment = Enum.TextXAlignment.Center
+loading.Parent = panel
 
-Tabs.Main:AddToggle("InfJumpToggle", {
-    Title = "Nhảy vô hạn",
-    Default = false,
-    Callback = function(v) InfJump = v end
-})
+-- Divider
+local divider = Instance.new("Frame")
+divider.Size = UDim2.new(0.85, 0, 0, 1)
+divider.Position = UDim2.new(0.075, 0, 0, 200)
+divider.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+divider.BackgroundTransparency = 0.7
+divider.BorderSizePixel = 0
+divider.Visible = false
+divider.Parent = panel
 
-Tabs.Main:AddToggle("NoclipToggle", {
-    Title = "Đi xuyên tường",
-    Default = false,
-    Callback = function(v) Noclip = v end
-})
+-- Stats frame
+local statsFrame = Instance.new("Frame")
+statsFrame.Size = UDim2.new(1, -24, 0, 90)
+statsFrame.Position = UDim2.new(0, 12, 0, 212)
+statsFrame.BackgroundTransparency = 1
+statsFrame.Visible = false
+statsFrame.Parent = panel
 
-----------------------------------------------------------------
--- [ TAB ESP ] - GIỮ NGUYÊN
-----------------------------------------------------------------
-Tabs.ESP:AddSection("Đối tượng hiển thị")
+local layout = Instance.new("UIListLayout", statsFrame)
+layout.FillDirection = Enum.FillDirection.Vertical
+layout.Padding = UDim.new(0, 8)
+layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 
-Tabs.ESP:AddToggle("EspAnimalToggle", {
-    Title = "Esp Động vật (Xanh lá)",
-    Default = false,
-    Callback = function(v) ESP_Animals = v end
-})
+-- Tạo từng dòng stat, trả về valLabel để update
+local function makeStat(icon, label, initVal, color)
+    local row = Instance.new("Frame")
+    row.Size = UDim2.new(1, 0, 0, 22)
+    row.BackgroundTransparency = 1
+    row.Parent = statsFrame
 
-Tabs.ESP:AddToggle("EspBossToggle", {
-    Title = "Esp Boss (Màu Đỏ)",
-    Default = false,
-    Callback = function(v) ESP_Boss = v end
-})
+    local iconLabel = Instance.new("TextLabel")
+    iconLabel.Size = UDim2.new(0, 22, 1, 0)
+    iconLabel.BackgroundTransparency = 1
+    iconLabel.Text = icon
+    iconLabel.TextColor3 = color
+    iconLabel.Font = Enum.Font.GothamBold
+    iconLabel.TextSize = 13
+    iconLabel.TextXAlignment = Enum.TextXAlignment.Center
+    iconLabel.Parent = row
 
-----------------------------------------------------------------
--- [ HỆ THỐNG XỬ LÝ ]
-----------------------------------------------------------------
+    local nameLabel = Instance.new("TextLabel")
+    nameLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    nameLabel.Position = UDim2.new(0, 24, 0, 0)
+    nameLabel.BackgroundTransparency = 1
+    nameLabel.Text = label
+    nameLabel.TextColor3 = Color3.fromRGB(180, 210, 255)
+    nameLabel.TextTransparency = 0.15
+    nameLabel.Font = Enum.Font.Gotham
+    nameLabel.TextSize = 13
+    nameLabel.TextXAlignment = Enum.TextXAlignment.Left
+    nameLabel.Parent = row
 
-local function GetType(p)
-    if not p.Team then return nil end
-    local n = p.Team.Name:lower()
-    if n:find("animal") or n:find("hider") or n:find("thú") then return "Animal" end
-    if n:find("keeper") or n:find("seeker") or n:find("boss") or n:find("staff") then return "Boss" end
-    return nil
+    local valLabel = Instance.new("TextLabel")
+    valLabel.Size = UDim2.new(0.4, 0, 1, 0)
+    valLabel.Position = UDim2.new(0.6, 0, 0, 0)
+    valLabel.BackgroundTransparency = 1
+    valLabel.Text = initVal
+    valLabel.TextColor3 = color
+    valLabel.Font = Enum.Font.GothamBold
+    valLabel.TextSize = 13
+    valLabel.TextXAlignment = Enum.TextXAlignment.Right
+    valLabel.Parent = row
+
+    return valLabel
 end
 
--- Anti-AFK
-local vu = game:GetService("VirtualUser")
-game:GetService("Players").LocalPlayer.Idled:Connect(function()
-    if AntiAFK then
-        vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-        task.wait(1)
-        vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-    end
-end)
+local levelVal     = makeStat("⚔", "Level",     "Scanning...", Color3.fromRGB(255, 220, 80))
+local fragVal      = makeStat("💎", "Fragments", "Scanning...", Color3.fromRGB(100, 210, 255))
+local beliVal      = makeStat("💰", "Beli",      "Scanning...", Color3.fromRGB(100, 255, 160))
 
--- ==================== AUTO WIN ĐỘNG VẬT (Giữ nguyên bay trời) ====================
-local animalConnection = nil
-local animalTargetY = nil
-
-local function StartAnimalWin()
-    if animalConnection then return end
-    animalTargetY = nil
-
-    animalConnection = game:GetService("RunService").Stepped:Connect(function()
-        local char = game.Players.LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp or not (AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal") then 
-            animalTargetY = nil return 
-        end
-
-        if not animalTargetY then animalTargetY = hrp.Position.Y + 420 end
-
-        if hrp.Position.Y < animalTargetY then
-            hrp.CFrame = CFrame.new(hrp.Position.X, hrp.Position.Y + 1.8, hrp.Position.Z)
-        else
-            hrp.CFrame = CFrame.new(hrp.Position.X, animalTargetY, hrp.Position.Z)
-        end
-
-        hrp.Velocity = Vector3.new(0,0,0)
-        hrp.AssemblyLinearVelocity = Vector3.new(0,0,0)
-    end)
-end
-
-local function StopAnimalWin()
-    if animalConnection then animalConnection:Disconnect() end
-    animalConnection = nil
-end
-
--- ==================== AUTO WIN NGƯỜI BẮN (Tele dính + Aim + Bắn liên tục) ====================
-local seekerConnection = nil
-local currentTarget = nil
-
-local function GetClosestAnimal()
-    local myChar = game.Players.LocalPlayer.Character
-    if not myChar or not myChar:FindFirstChild("HumanoidRootPart") then return nil end
-    local myPos = myChar.HumanoidRootPart.Position
-    local closest, dist = nil, math.huge
-
-    for _, p in ipairs(game.Players:GetPlayers()) do
-        if p == game.Players.LocalPlayer then continue end
-        if GetType(p) ~= "Animal" then continue end
-        local char = p.Character
-        if not char or not char:FindFirstChild("HumanoidRootPart") or char.Humanoid.Health <= 0 then continue end
-
-        local d = (char.HumanoidRootPart.Position - myPos).Magnitude
-        if d < dist then
-            dist = d
-            closest = char
-        end
-    end
-    return closest
-end
-
-local function StartSeekerWin()
-    if seekerConnection then return end
-
-    seekerConnection = game:GetService("RunService").Stepped:Connect(function()
-        local char = game.Players.LocalPlayer.Character
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hrp or not (AutoWin_Seeker and GetType(game.Players.LocalPlayer) == "Boss") then 
-            currentTarget = nil return 
-        end
-
-        -- Tìm target mới nếu target cũ chết hoặc không có
-        if not currentTarget or not currentTarget.Parent or currentTarget.Humanoid.Health <= 0 then
-            currentTarget = GetClosestAnimal()
-        end
-
-        if currentTarget and currentTarget:FindFirstChild("HumanoidRootPart") then
-            local targetHRP = currentTarget.HumanoidRootPart
-            local targetHead = currentTarget:FindFirstChild("Head")
-
-            -- TELE DÍNH VÀO TRONG NGƯỜI CHƠI
-            hrp.CFrame = targetHRP.CFrame * CFrame.new(0, 0, -1.5)   -- dính sát vào thân
-
-            -- AIM (nhắm đầu)
-            if targetHead then
-                workspace.CurrentCamera.CFrame = CFrame.new(workspace.CurrentCamera.CFrame.Position, targetHead.Position)
-            end
-
-            -- BẮN LIÊN TỤC
-            local tool = char:FindFirstChildOfClass("Tool")
-            if tool and tool:FindFirstChild("Handle") then
-                tool:Activate()   -- bắn liên tục
-            end
-        end
-    end)
-end
-
-local function StopSeekerWin()
-    if seekerConnection then seekerConnection:Disconnect() end
-    seekerConnection = nil
-    currentTarget = nil
-end
-
--- Theo dõi toggle
-game:GetService("RunService").Heartbeat:Connect(function()
-    -- Động vật
-    if AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal" then
-        if not animalConnection then StartAnimalWin() end
+-- Format số đẹp: 1200000 → 1.2M
+local function formatNum(n)
+    if n >= 1e9 then
+        return string.format("%.1fB", n / 1e9)
+    elseif n >= 1e6 then
+        return string.format("%.1fM", n / 1e6)
+    elseif n >= 1e3 then
+        return string.format("%.1fK", n / 1e3)
     else
-        if animalConnection then StopAnimalWin() end
+        return tostring(math.floor(n))
+    end
+end
+
+-- Hàm quét dữ liệu từ leaderstats / stats của game
+local function scanStats()
+    local char = player.Character
+    local leaderstats = player:FindFirstChild("leaderstats")
+    local data = player:FindFirstChild("Data") or player:FindFirstChild("PlayerData") or player:FindFirstChild("stats")
+
+    local level, fragments, beli = nil, nil, nil
+
+    -- Quét Level
+    if leaderstats then
+        local lv = leaderstats:FindFirstChild("Level") or leaderstats:FindFirstChild("level")
+                or leaderstats:FindFirstChild("Lvl")   or leaderstats:FindFirstChild("lvl")
+        if lv then level = lv.Value end
+
+        local fr = leaderstats:FindFirstChild("Fragments") or leaderstats:FindFirstChild("fragments")
+                or leaderstats:FindFirstChild("Fragment")  or leaderstats:FindFirstChild("F")
+        if fr then fragments = fr.Value end
+
+        local bl = leaderstats:FindFirstChild("Beli") or leaderstats:FindFirstChild("beli")
+                or leaderstats:FindFirstChild("Berries") or leaderstats:FindFirstChild("Money")
+                or leaderstats:FindFirstChild("Cash")
+        if bl then beli = bl.Value end
     end
 
-    -- Người bắn
-    if AutoWin_Seeker and GetType(game.Players.LocalPlayer) == "Boss" then
-        if not seekerConnection then StartSeekerWin() end
-    else
-        if seekerConnection then StopSeekerWin() end
-    end
-end)
-
--- ==================== SPEED + NOCLIP + INF JUMP ====================
-game:GetService("RunService").Stepped:Connect(function()
-    local char = game.Players.LocalPlayer.Character
-    if not char then return end
-    local hrp = char:FindFirstChild("HumanoidRootPart")
-    local hum = char:FindFirstChild("Humanoid")
-    if not hrp or not hum then return end
-
-    hum.WalkSpeed = WalkSpeed_Val
-
-    local isFlying = (AutoWin_Animal and GetType(game.Players.LocalPlayer) == "Animal") or
-                     (AutoWin_Seeker and GetType(game.Players.LocalPlayer) == "Boss")
-
-    if Noclip or isFlying then
-        for _, part in pairs(char:GetDescendants()) do
-            if part:IsA("BasePart") then part.CanCollide = false end
+    if data then
+        if not level then
+            local lv = data:FindFirstChild("Level") or data:FindFirstChild("level")
+            if lv then level = lv.Value end
+        end
+        if not fragments then
+            local fr = data:FindFirstChild("Fragments") or data:FindFirstChild("Fragment")
+            if fr then fragments = fr.Value end
+        end
+        if not beli then
+            local bl = data:FindFirstChild("Beli") or data:FindFirstChild("Berries") or data:FindFirstChild("Money")
+            if bl then beli = bl.Value end
         end
     end
-end)
 
--- Nhảy vô hạn
-game:GetService("UserInputService").JumpRequest:Connect(function()
-    if InfJump then
-        local hum = game.Players.LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-        if hum then hum:ChangeState("Jumping") end
-    end
-end)
-
--- ==================== ESP GIỮ NGUYÊN ====================
-local function CreateESP(p)
-    local tracer = Drawing.new("Line")
-    local label = Drawing.new("Text")
-    game:GetService("RunService").RenderStepped:Connect(function()
-        if p.Character and p.Character:FindFirstChild("HumanoidRootPart") and p.Character.Humanoid.Health > 0 then
-            local hrp = p.Character.HumanoidRootPart
-            local vec, onScreen = game.Workspace.CurrentCamera:WorldToViewportPoint(hrp.Position)
-            local pType = GetType(p)
-            local active = (pType == "Animal" and ESP_Animals) or (pType == "Boss" and ESP_Boss)
-            local color = (pType == "Animal") and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 0, 0)
-
-            if onScreen and active then
-                local dist = math.floor((game.Players.LocalPlayer.Character.HumanoidRootPart.Position - hrp.Position).Magnitude)
-                tracer.Visible, tracer.From, tracer.To, tracer.Color = true, 
-                    Vector2.new(game.Workspace.CurrentCamera.ViewportSize.X/2, game.Workspace.CurrentCamera.ViewportSize.Y), 
-                    Vector2.new(vec.X, vec.Y), color
-                label.Visible, label.Position, label.Text, label.Color = true, 
-                    Vector2.new(vec.X, vec.Y - 40), 
-                    string.format("%s [%dm]", p.Name, dist), color
-                label.Size, label.Center, label.Outline = 14, true, true
-            else
-                tracer.Visible, label.Visible = false, false
+    -- Fallback: quét toàn bộ player children
+    if not level or not fragments or not beli then
+        for _, child in ipairs(player:GetChildren()) do
+            for _, val in ipairs(child:GetChildren()) do
+                local n = val.Name:lower()
+                if not level and (n == "level" or n == "lvl") and val:IsA("IntValue") or val:IsA("NumberValue") then
+                    level = val.Value
+                end
+                if not fragments and (n == "fragments" or n == "fragment" or n == "f") and (val:IsA("IntValue") or val:IsA("NumberValue")) then
+                    fragments = val.Value
+                end
+                if not beli and (n == "beli" or n == "berries" or n == "money" or n == "cash") and (val:IsA("IntValue") or val:IsA("NumberValue")) then
+                    beli = val.Value
+                end
             end
-        else
-            tracer.Visible, label.Visible = false, false
         end
+    end
+
+    return level, fragments, beli
+end
+
+-- === ANIMATIONS ===
+local tweenInfo = TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+
+TweenService:Create(overlay, tweenInfo, {BackgroundTransparency = 0.15}):Play()
+TweenService:Create(blur,    tweenInfo, {Size = 14}):Play()
+
+panel.Size = UDim2.new(0, 310, 0, 280)
+TweenService:Create(panel, tweenInfo, {
+    BackgroundTransparency = 0.25,
+    Size = UDim2.new(0, 370, 0, 330)
+}):Play()
+
+-- Float crystal
+local function floatLoop()
+    local up = TweenService:Create(crystal,
+        TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+        {Position = UDim2.new(0.5, 0, 0, 54)}
+    )
+    local down = TweenService:Create(crystal,
+        TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+        {Position = UDim2.new(0.5, 0, 0, 70)}
+    )
+    up:Play()
+    up.Completed:Connect(function()
+        down:Play()
+        down.Completed:Connect(floatLoop)
     end)
 end
 
-for _, p in ipairs(game.Players:GetPlayers()) do 
-    if p ~= game.Players.LocalPlayer then CreateESP(p) end 
-end
-game.Players.PlayerAdded:Connect(CreateESP)
+floatLoop()
 
--- ==================== HOÀN TẤT ====================
-Window:SelectTab(1)
-Fluent:Notify({ 
-    Title = "Vxeze Hub", 
-    Content = "Vxezestudio ran successfully!", 
-    Duration = 8 
-})
+-- Loading dots animation + scan liên tục
+local dots = {"Loading.", "Loading..", "Loading..."}
+local idx = 1
+local loadingDone = false
+local SCAN_INTERVAL = 0.5 -- quét mỗi 0.5 giây
+
+task.spawn(function()
+    -- Chạy loading 2 giây trước
+    local timer = 0
+    while timer < 2 do
+        loading.Text = dots[idx]
+        idx = (idx % #dots) + 1
+        task.wait(SCAN_INTERVAL)
+        timer = timer + SCAN_INTERVAL
+    end
+
+    -- Quét lần đầu xong → ẩn loading, hiện stats
+    local lv, fr, bl = scanStats()
+    levelVal.Text = lv and formatNum(lv) or "N/A"
+    fragVal.Text  = fr and formatNum(fr) or "N/A"
+    beliVal.Text  = bl and formatNum(bl) or "N/A"
+
+    -- Ẩn loading, hiện stats mượt
+    TweenService:Create(loading, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
+    task.wait(0.4)
+    loading.Visible = false
+    divider.Visible = true
+    statsFrame.Visible = true
+
+    -- Fade in stats
+    statsFrame.GroupTransparency = 1
+    TweenService:Create(statsFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {GroupTransparency = 0}):Play()
+
+    loadingDone = true
+end)
+
+-- Quét liên tục sau khi loading xong
+task.spawn(function()
+    while not loadingDone do task.wait(0.1) end
+    while true do
+        task.wait(SCAN_INTERVAL)
+        local lv, fr, bl = scanStats()
+        if lv then levelVal.Text = formatNum(lv) end
+        if fr then fragVal.Text  = formatNum(fr) end
+        if bl then beliVal.Text  = formatNum(bl) end
+    end
+end)
