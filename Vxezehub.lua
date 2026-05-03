@@ -4,14 +4,12 @@ local TweenService = game:GetService("TweenService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "CrystalDisplayUI"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.Parent = playerGui
 
--- Overlay
 local overlay = Instance.new("Frame")
 overlay.Size = UDim2.new(1, 0, 1, 0)
 overlay.BackgroundColor3 = Color3.fromRGB(8, 12, 30)
@@ -19,15 +17,13 @@ overlay.BackgroundTransparency = 1
 overlay.BorderSizePixel = 0
 overlay.Parent = screenGui
 
--- Blur
 local blur = Instance.new("BlurEffect")
 blur.Size = 0
 blur.Parent = game:GetService("Lighting")
 
--- Panel
 local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
-panel.Size = UDim2.new(0, 370, 0, 330)
+panel.Size = UDim2.new(0, 370, 0, 360)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
 panel.BackgroundColor3 = Color3.fromRGB(10, 20, 52)
 panel.BackgroundTransparency = 1
@@ -41,20 +37,19 @@ stroke.Color = Color3.fromRGB(70, 140, 255)
 stroke.Transparency = 0.7
 stroke.Thickness = 1.2
 
--- Crystal / Avatar image (ID của bạn)
+-- Avatar to hơn: 130x130
 local crystal = Instance.new("ImageLabel")
 crystal.AnchorPoint = Vector2.new(0.5, 0.5)
-crystal.Size = UDim2.new(0, 100, 0, 100)
-crystal.Position = UDim2.new(0.5, 0, 0, 62)
+crystal.Size = UDim2.new(0, 130, 0, 130)
+crystal.Position = UDim2.new(0.5, 0, 0, 75)
 crystal.BackgroundTransparency = 1
 crystal.Image = "rbxassetid://83581831707784"
 crystal.ScaleType = Enum.ScaleType.Fit
 crystal.Parent = panel
 
--- Vxeze Hub
 local main = Instance.new("TextLabel")
 main.Size = UDim2.new(1, -24, 0, 34)
-main.Position = UDim2.new(0, 12, 0, 128)
+main.Position = UDim2.new(0, 12, 0, 148)
 main.BackgroundTransparency = 1
 main.Text = "Vxeze Hub"
 main.TextColor3 = Color3.fromRGB(80, 200, 255)
@@ -63,10 +58,9 @@ main.TextSize = 26
 main.TextXAlignment = Enum.TextXAlignment.Center
 main.Parent = panel
 
--- Loading label
 local loading = Instance.new("TextLabel")
 loading.Size = UDim2.new(1, -24, 0, 22)
-loading.Position = UDim2.new(0, 12, 0, 166)
+loading.Position = UDim2.new(0, 12, 0, 188)
 loading.BackgroundTransparency = 1
 loading.Text = "Loading..."
 loading.TextColor3 = Color3.fromRGB(200, 220, 255)
@@ -76,20 +70,18 @@ loading.TextSize = 14
 loading.TextXAlignment = Enum.TextXAlignment.Center
 loading.Parent = panel
 
--- Divider
 local divider = Instance.new("Frame")
 divider.Size = UDim2.new(0.85, 0, 0, 1)
-divider.Position = UDim2.new(0.075, 0, 0, 200)
+divider.Position = UDim2.new(0.075, 0, 0, 222)
 divider.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
 divider.BackgroundTransparency = 0.7
 divider.BorderSizePixel = 0
 divider.Visible = false
 divider.Parent = panel
 
--- Stats frame
 local statsFrame = Instance.new("Frame")
 statsFrame.Size = UDim2.new(1, -24, 0, 90)
-statsFrame.Position = UDim2.new(0, 12, 0, 212)
+statsFrame.Position = UDim2.new(0, 12, 0, 234)
 statsFrame.BackgroundTransparency = 1
 statsFrame.Visible = false
 statsFrame.Parent = panel
@@ -116,7 +108,7 @@ local function makeStat(icon, label, color)
     iconLabel.Parent = row
 
     local nameLabel = Instance.new("TextLabel")
-    nameLabel.Size = UDim2.new(0.5, 0, 1, 0)
+    nameLabel.Size = UDim2.new(0.45, 0, 1, 0)
     nameLabel.Position = UDim2.new(0, 24, 0, 0)
     nameLabel.BackgroundTransparency = 1
     nameLabel.Text = label
@@ -128,10 +120,10 @@ local function makeStat(icon, label, color)
     nameLabel.Parent = row
 
     local valLabel = Instance.new("TextLabel")
-    valLabel.Size = UDim2.new(0.4, 0, 1, 0)
-    valLabel.Position = UDim2.new(0.6, 0, 0, 0)
+    valLabel.Size = UDim2.new(0.52, 0, 1, 0)
+    valLabel.Position = UDim2.new(0.48, 0, 0, 0)
     valLabel.BackgroundTransparency = 1
-    valLabel.Text = "0"
+    valLabel.Text = "..."
     valLabel.TextColor3 = color
     valLabel.Font = Enum.Font.GothamBold
     valLabel.TextSize = 13
@@ -145,30 +137,20 @@ local levelVal = makeStat("⚔", "Level",     Color3.fromRGB(255, 220, 80))
 local fragVal  = makeStat("💎", "Fragments", Color3.fromRGB(100, 210, 255))
 local beliVal  = makeStat("💰", "Beli",      Color3.fromRGB(100, 255, 160))
 
--- Format số
-local function formatNum(n)
-    if n >= 1e9 then return string.format("%.1fB", n/1e9)
-    elseif n >= 1e6 then return string.format("%.1fM", n/1e6)
-    elseif n >= 1e3 then return string.format("%.1fK", n/1e3)
-    else return tostring(math.floor(n)) end
-end
-
--- CountUp animation
-local function countUp(label, fromVal, toVal, duration, isLevel)
-    task.spawn(function()
-        local steps = 40
-        local interval = duration / steps
-        local diff = toVal - fromVal
-        for i = 1, steps do
-            local current = math.floor(fromVal + (diff * (i / steps)))
-            label.Text = isLevel and tostring(current) or formatNum(current)
-            task.wait(interval)
+local function formatFull(n)
+    local s = tostring(math.floor(n))
+    local result = ""
+    local count = 0
+    for i = #s, 1, -1 do
+        count = count + 1
+        result = s:sub(i, i) .. result
+        if count % 3 == 0 and i ~= 1 then
+            result = "," .. result
         end
-        label.Text = isLevel and tostring(math.floor(toVal)) or formatNum(toVal)
-    end)
+    end
+    return result
 end
 
--- Quét stats
 local function scanStats()
     local level, fragments, beli = nil, nil, nil
     local leaderstats = player:FindFirstChild("leaderstats")
@@ -214,26 +196,28 @@ local function scanStats()
     return level, fragments, beli
 end
 
-local currentLevel, currentFrag, currentBeli = 0, 0, 0
+local function updateStats(lv, fr, bl)
+    if lv then levelVal.Text = tostring(math.floor(lv)) end
+    if fr then fragVal.Text  = formatFull(fr) end
+    if bl then beliVal.Text  = formatFull(bl) end
+end
 
--- === ANIMATIONS ===
 local tweenInfo = TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
 TweenService:Create(overlay, tweenInfo, {BackgroundTransparency = 0.15}):Play()
 TweenService:Create(blur,    tweenInfo, {Size = 14}):Play()
-panel.Size = UDim2.new(0, 310, 0, 280)
+panel.Size = UDim2.new(0, 310, 0, 300)
 TweenService:Create(panel, tweenInfo, {
     BackgroundTransparency = 0.25,
-    Size = UDim2.new(0, 370, 0, 330)
+    Size = UDim2.new(0, 370, 0, 360)
 }):Play()
 
--- Float crystal
 local function floatLoop()
     local up = TweenService:Create(crystal,
         TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-        {Position = UDim2.new(0.5, 0, 0, 54)})
+        {Position = UDim2.new(0.5, 0, 0, 65)})
     local down = TweenService:Create(crystal,
         TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-        {Position = UDim2.new(0.5, 0, 0, 70)})
+        {Position = UDim2.new(0.5, 0, 0, 83)})
     up:Play()
     up.Completed:Connect(function()
         down:Play()
@@ -242,7 +226,6 @@ local function floatLoop()
 end
 floatLoop()
 
--- Loading + scan
 local dots = {"Loading.", "Loading..", "Loading..."}
 local idx = 1
 local loadingDone = false
@@ -257,9 +240,6 @@ task.spawn(function()
     end
 
     local lv, fr, bl = scanStats()
-    lv = lv or 0
-    fr = fr or 0
-    bl = bl or 0
 
     TweenService:Create(loading, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
     task.wait(0.4)
@@ -268,37 +248,15 @@ task.spawn(function()
     statsFrame.Visible = true
     TweenService:Create(statsFrame, TweenInfo.new(0.5, Enum.EasingStyle.Quint), {GroupTransparency = 0}):Play()
 
-    countUp(levelVal, 0, lv, 1.2, true)
-    countUp(fragVal,  0, fr, 1.5, false)
-    countUp(beliVal,  0, bl, 1.8, false)
-
-    currentLevel = lv
-    currentFrag  = fr
-    currentBeli  = bl
-    loadingDone  = true
+    updateStats(lv, fr, bl)
+    loadingDone = true
 end)
 
--- Quét liên tục
 task.spawn(function()
     while not loadingDone do task.wait(0.1) end
     while true do
         task.wait(0.5)
         local lv, fr, bl = scanStats()
-        lv = lv or currentLevel
-        fr = fr or currentFrag
-        bl = bl or currentBeli
-
-        if lv ~= currentLevel then
-            countUp(levelVal, currentLevel, lv, 0.6, true)
-            currentLevel = lv
-        end
-        if fr ~= currentFrag then
-            countUp(fragVal, currentFrag, fr, 0.6, false)
-            currentFrag = fr
-        end
-        if bl ~= currentBeli then
-            countUp(beliVal, currentBeli, bl, 0.6, false)
-            currentBeli = bl
-        end
+        updateStats(lv, fr, bl)
     end
 end)
