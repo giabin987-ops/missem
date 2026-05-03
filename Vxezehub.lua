@@ -15,7 +15,7 @@ screenGui.Parent = playerGui
 -- Overlay
 local overlay = Instance.new("Frame")
 overlay.Size = UDim2.new(1, 0, 1, 0)
-overlay.BackgroundColor3 = Color3.fromRGB(8, 12, 30)
+overlay.BackgroundColor3 = Color3.fromRGB(6, 10, 25)
 overlay.BackgroundTransparency = 1
 overlay.BorderSizePixel = 0
 overlay.Parent = screenGui
@@ -30,7 +30,7 @@ local panel = Instance.new("Frame")
 panel.AnchorPoint = Vector2.new(0.5, 0.5)
 panel.Size = UDim2.new(0, 370, 0, 330)
 panel.Position = UDim2.new(0.5, 0, 0.5, 0)
-panel.BackgroundColor3 = Color3.fromRGB(10, 20, 52)
+panel.BackgroundColor3 = Color3.fromRGB(12, 18, 40)
 panel.BackgroundTransparency = 1
 panel.BorderSizePixel = 0
 panel.Parent = overlay
@@ -38,7 +38,7 @@ panel.Parent = overlay
 Instance.new("UICorner", panel).CornerRadius = UDim.new(0, 20)
 
 local stroke = Instance.new("UIStroke", panel)
-stroke.Color = Color3.fromRGB(70, 140, 255)
+stroke.Color = Color3.fromRGB(60, 100, 180)
 stroke.Transparency = 0.7
 stroke.Thickness = 1.2
 
@@ -49,21 +49,69 @@ crystal.Size = UDim2.new(0, 150, 0, 150)
 crystal.Position = UDim2.new(0.5, 0, 0, 62)
 crystal.BackgroundTransparency = 1
 crystal.Image = "rbxassetid://83581831707784"
-crystal.ImageColor3 = Color3.fromRGB(120, 190, 255)
+crystal.ImageColor3 = Color3.fromRGB(90, 140, 200)
 crystal.ScaleType = Enum.ScaleType.Fit
 crystal.Parent = panel
 
 -- Vxeze Hub
+local titleHolder = Instance.new("Frame")
+titleHolder.Size = UDim2.new(1, -24, 0, 34)
+titleHolder.Position = UDim2.new(0, 12, 0, 128)
+titleHolder.BackgroundTransparency = 1
+titleHolder.Parent = panel
+
+-- Glow (ánh sáng nhẹ phía sau)
+local glow = Instance.new("TextLabel")
+glow.Size = UDim2.new(1, 0, 1, 0)
+glow.BackgroundTransparency = 1
+glow.Text = "Vxeze Hub"
+glow.TextColor3 = Color3.fromRGB(70, 140, 200)
+glow.TextTransparency = 0.7
+glow.Font = Enum.Font.GothamBlack
+glow.TextSize = 28
+glow.TextXAlignment = Enum.TextXAlignment.Center
+glow.Parent = titleHolder
+
+-- Shadow (bóng đổ)
+local shadow = Instance.new("TextLabel")
+shadow.Size = UDim2.new(1, 0, 1, 0)
+shadow.BackgroundTransparency = 1
+shadow.Text = "Vxeze Hub"
+shadow.TextColor3 = Color3.fromRGB(20, 50, 100)
+shadow.TextTransparency = 0.5
+shadow.Font = Enum.Font.GothamBlack
+shadow.TextSize = 28
+shadow.TextXAlignment = Enum.TextXAlignment.Center
+shadow.Position = UDim2.new(0, 2, 0, 2)
+shadow.Parent = titleHolder
+
+-- Chữ chính
 local main = Instance.new("TextLabel")
-main.Size = UDim2.new(1, -24, 0, 34)
-main.Position = UDim2.new(0, 12, 0, 128)
+main.Size = UDim2.new(1, 0, 1, 0)
 main.BackgroundTransparency = 1
 main.Text = "Vxeze Hub"
-main.TextColor3 = Color3.fromRGB(80, 200, 255)
-main.Font = Enum.Font.GothamBold
-main.TextSize = 26
+main.TextColor3 = Color3.fromRGB(120, 180, 220)
+main.Font = Enum.Font.GothamBlack
+main.TextSize = 28
 main.TextXAlignment = Enum.TextXAlignment.Center
-main.Parent = panel
+main.Parent = titleHolder
+
+-- Gradient (màu chuyển nhẹ)
+local grad = Instance.new("UIGradient")
+grad.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(160, 210, 240)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 170, 220)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 110, 180))
+}
+grad.Rotation = 90
+grad.Parent = main
+
+-- Viền chữ
+local textStroke = Instance.new("UIStroke")
+textStroke.Color = Color3.fromRGB(80, 140, 200)
+textStroke.Thickness = 1.2
+textStroke.Transparency = 0.4
+textStroke.Parent = main
 
 -- Loading label
 local loading = Instance.new("TextLabel")
@@ -82,7 +130,7 @@ loading.Parent = panel
 local divider = Instance.new("Frame")
 divider.Size = UDim2.new(0.85, 0, 0, 1)
 divider.Position = UDim2.new(0.075, 0, 0, 200)
-divider.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+divider.BackgroundColor3 = Color3.fromRGB(60, 100, 180)
 divider.BackgroundTransparency = 0.7
 divider.BorderSizePixel = 0
 divider.Visible = false
